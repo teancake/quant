@@ -31,6 +31,137 @@ https://www.joinquant.com/help/api/help#name:technicalanalysis
 
 ### 特征：
 原始特征就是每支股票每天的开盘、收盘等数据，衍生特征目前只使用了myTT计算出来的技术指标。
+#### 衍生特征
+##### 收盘价的N日简单移动平均值
+ma_5
+ma_10
+ma_20
+ma_60
+ma_120
+ma_240
+
+##### 最近N天收盘最高价
+hhv_5
+hhv_10
+hhv_20
+hhv_60
+hhv_120
+hhv_240
+
+##### 最近N天最低收盘价 
+llv_5
+llv_10
+llv_20
+llv_60
+llv_120
+llv_240
+
+##### BIAS乖离率
+bias_6
+bias_12
+bias_24
+
+##### BOLL指标，布林带  
+boll_upper_20
+boll_mid_20
+boll_lower_20
+
+##### RSI指标 
+rsi_6
+rsi_12
+rsi_24
+
+##### W&R威廉指标 
+wr_10
+wr_6
+
+##### 动量指标 
+mtm_12
+mtm_12_ma_6
+
+##### KDJ指标 
+k_9
+d_9
+j_9
+
+##### MACD指标
+macd_dif
+macd_dea
+macd
+
+##### 动向指标 
+dmi_pdi
+dmi_mdi
+dmi_adx
+dmi_adxr
+
+##### 能量潮指标 
+obv
+
+##### CCI指标
+cci
+
+##### 变动率指标 
+roc_12
+ma_6_roc_12
+
+##### BBI多空指标  
+bbi
+
+##### EMA指数平均数指标 
+expma_12
+expma_50
+
+##### ARBR情绪指标 
+ar
+br
+
+##### 真实波动N日平均值 
+atr
+
+##### 平行线差指标 
+dma_dif
+dma
+
+##### 简易波动指标 
+emv
+maemv
+
+##### PSY
+psy
+psyma
+
+##### 振动升降指标 
+asi
+asit
+
+##### MFI指标 
+mfi
+
+##### 梅斯线 
+mass
+mamass
+
+##### 区间震荡线 
+dpo
+madpo
+
+##### VR容量比率 
+vr
+
+##### 三重指数平滑平均线 
+trix
+trma
+
+##### 肯特纳通道（Keltner Channel，KC）
+kc_upper
+kc_mid
+kc_lower
+
+##### 唐奇安通道（DC）
+dc_upper
+dc_mid
+dc_lower
 
 ### 模型：
 
