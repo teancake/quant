@@ -1,5 +1,0 @@
-pandas~=2.0.2
-torch
-scikit-learn
-xgboost
-lightgbm
