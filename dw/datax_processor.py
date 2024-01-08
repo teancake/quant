@@ -11,6 +11,8 @@ import uuid
 
 from utils.log_util import get_logger
 
+from utils.starrocks_db_util import get_starrocks_config
+
 logger = get_logger(__name__)
 
 
@@ -41,6 +43,7 @@ class DataxProcessor:
             os.remove(fname)
 
     def _generate_conf_str(self, columns, table, where, temp_file_prefix):
+        server_address, port, db_name, user, password = get_starrocks_config()
         template = '''
             {
                 "job": {
@@ -58,14 +61,14 @@ class DataxProcessor:
                             "reader": {
                                 "name": "starrocksreader",
                                 "parameter": {
-                                    "username": "quant",
-                                    "password": "quant",
+                                    "username": "$username",
+                                    "password": "$password",
                                     "column": $columns,
                                     "where": "$where",
                                     "connection": [
                                         {   "table": ["$table"],
                                             "jdbcUrl": [
-                                                 "jdbc:mysql://192.168.50.228:32428/akshare_data"
+                                                 "jdbc:mysql://$server_address:$port/$db_name"
                                             ]
                                         }
                                     ]
@@ -87,6 +90,7 @@ class DataxProcessor:
                 }
             }
         '''
+        template = template.replace("$username", user).replace("$password", password).replace("$server_address",server_address).replace("$port", port).replace("$db_name", db_name)
         columns_str = "[" + ', '.join(f'"{c}"' for c in columns) + "]"
         conf_str = template.replace("$columns", columns_str).replace("$table", table).replace("$where", where)
         conf_str = conf_str.replace("$file_name", temp_file_prefix)

@@ -4,7 +4,7 @@ sys.path.append(parent_dir)
 
 
 from utils.log_util import get_logger
-from utils.starrocks_db_util import StarrocksDbUtil, generate_partition_spec
+from utils.starrocks_db_util import StarrocksDbUtil, generate_partition_spec, get_starrocks_config
 import sys
 import pandas as pd
 from datetime import datetime
@@ -17,6 +17,7 @@ if __name__ == '__main__':
     logger.info("execute task on ds {}".format(ds))
 
     partition_str = generate_partition_spec(ds)
+    _, _, db_name, _, _ = get_starrocks_config()
 
     ods_ddl = '''
 CREATE TABLE if not exists `ods_starrocks_table_partitions` ( 
@@ -43,7 +44,7 @@ PROPERTIES(
     logger.info("run ods ddl")
     db.run_sql(ods_ddl)
 
-    table_sql = "show tables from akshare_data;"
+    table_sql = f"show tables from {db_name};"
     result = db.run_sql(table_sql)
     print(result)
     data_df_list = []

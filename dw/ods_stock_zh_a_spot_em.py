@@ -5,6 +5,7 @@ sys.path.append(parent_dir)
 
 from utils.log_util import get_logger
 from utils.starrocks_db_util import StarrocksDbUtil
+from utils.db_util import get_mysql_config
 from utils.stock_zh_a_util import is_trade_date
 
 import sys
@@ -18,8 +19,8 @@ if __name__ == '__main__':
     if not is_trade_date(ds):
         logger.info(f"{ds} is not trade date. task exits.")
         exit(os.EX_OK)
-
-    ods_sql_str = '''
+    server_address, port, db_name, user, password = get_mysql_config()
+    ods_sql_str = f'''
 CREATE TABLE if not exists `external_stock_zh_a_spot_em` ( 
  `gmt_create` datetime ,
  `gmt_modified` datetime ,
@@ -50,11 +51,11 @@ CREATE TABLE if not exists `external_stock_zh_a_spot_em` (
  )ENGINE = mysql 
 PROPERTIES
 (
-"host" = "192.168.50.100",
-"port" = "3306",
-"user" = "quant",
-"password" = "quant",
-"database" = "akshare_data",
+"host" = "{server_address}",
+"port" = "{port}",
+"user" = "{user}",
+"password" = "{password}",
+"database" = "{db_name}",
 "table" = "stock_zh_a_spot_em"
 );
 
@@ -88,7 +89,7 @@ CREATE TABLE if not exists `ods_stock_zh_a_spot_em` (
  `年初至今涨跌幅` double ,
  `ds` date) 
 PARTITION BY RANGE(ds)(
-    START ("20230601") END ("{}") EVERY (INTERVAL 1 day)
+    START ("20230601") END ("{ds}") EVERY (INTERVAL 1 day)
 )
 DISTRIBUTED BY HASH(ds) BUCKETS 32
 PROPERTIES(
@@ -102,7 +103,7 @@ PROPERTIES(
 )
 ;
 
-INSERT OVERWRITE ods_stock_zh_a_spot_em PARTITION(p{})
+INSERT OVERWRITE ods_stock_zh_a_spot_em PARTITION(p{ds})
 select 
 `gmt_create`,
 `gmt_modified`,
@@ -132,9 +133,9 @@ select
 `ds`
 from 
 external_stock_zh_a_spot_em 
-where ds = '{}'
+where ds = '{ds}'
 ;
-    '''.format(ds, ds, ds)
+    '''
 
     dwd_sql_str = '''
     CREATE TABLE if not exists dwd_stock_zh_a_spot_em_di LIKE ods_stock_zh_a_spot_em;

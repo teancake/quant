@@ -8,6 +8,8 @@ from utils.starrocks_db_util import StarrocksDbUtil, generate_partition_spec, ge
 from utils.stock_zh_a_util import is_trade_date
 import sys
 
+from utils.db_util import get_mysql_config
+
 
 logger = get_logger(__name__)
 
@@ -20,8 +22,8 @@ if __name__ == '__main__':
         exit(os.EX_OK)
 
     partition_str = generate_partition_spec(ds)
-    ddl_sql_str = '''
-
+    server_address, port, db_name, user, password = get_mysql_config()
+    ddl_sql_str = f'''
  CREATE TABLE IF NOT EXISTS `external_index_zh_a_hist` ( 
 `gmt_create` datetime DEFAULT NULL,
 `gmt_modified` datetime DEFAULT NULL,
@@ -43,11 +45,11 @@ if __name__ == '__main__':
 ) ENGINE = mysql 
 PROPERTIES
 (
-"host" = "192.168.50.100",
-"port" = "3306",
-"user" = "quant",
-"password" = "quant",
-"database" = "akshare_data",
+"host" = "{server_address}",
+"port" = "{port}",
+"user" = "{user}",
+"password" = "{password}",
+"database" = "{db_name}",
 "table" = "index_zh_a_hist"
 );
 
@@ -73,7 +75,7 @@ CREATE TABLE if not exists `ods_index_zh_a_hist` (
 `ds` date DEFAULT NULL
 ) 
 PARTITION BY RANGE(ds)(
-{}
+{partition_str}
 )
 DISTRIBUTED BY HASH(ds) BUCKETS 32
 PROPERTIES(
@@ -107,7 +109,7 @@ CREATE TABLE if not exists `dwd_index_zh_a_hist_df` (
 `ds` date DEFAULT NULL
  )
 PARTITION BY RANGE(ds)(
-{}
+{partition_str}
 )
 DISTRIBUTED BY HASH(ds) BUCKETS 32
 PROPERTIES(
@@ -120,7 +122,7 @@ PROPERTIES(
     "dynamic_partition.buckets" = "32"
 )
 ;
-'''.format(partition_str, partition_str)
+'''
 
     ods_sql_str = '''
 SET SESSION query_timeout=1200;

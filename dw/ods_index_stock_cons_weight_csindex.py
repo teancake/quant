@@ -8,6 +8,8 @@ from utils.starrocks_db_util import StarrocksDbUtil, generate_partition_spec
 from utils.stock_zh_a_util import is_trade_date
 import sys
 
+from utils.db_util import get_mysql_config
+
 
 logger = get_logger(__name__)
 
@@ -20,7 +22,9 @@ if __name__ == '__main__':
         exit(os.EX_OK)
 
     partition_str = generate_partition_spec(ds)
-    ddl_sql_str = '''
+    server_address, port, db_name, user, password = get_mysql_config()
+
+    ddl_sql_str = f'''
 
 CREATE TABLE if not exists `external_index_stock_cons_weight_csindex` ( 
  `gmt_create` datetime ,
@@ -40,11 +44,11 @@ CREATE TABLE if not exists `external_index_stock_cons_weight_csindex` (
 ENGINE = mysql 
 PROPERTIES
 (
-"host" = "192.168.50.100",
-"port" = "3306",
-"user" = "quant",
-"password" = "quant",
-"database" = "akshare_data",
+"host" = "{server_address}",
+"port" = "{port}",
+"user" = "{user}",
+"password" = "{password}",
+"database" = "{db_name}",
 "table" = "index_stock_cons_weight_csindex"
 );
 
@@ -65,7 +69,7 @@ CREATE TABLE if not exists `ods_index_stock_cons_weight_csindex` (
  `权重` double ,
  `ds` date ) 
 PARTITION BY RANGE(ds)(
-{}
+{partition_str}
 )
 DISTRIBUTED BY HASH(ds) BUCKETS 32
 PROPERTIES(
@@ -94,7 +98,7 @@ CREATE TABLE if not exists `dwd_index_stock_cons_weight_csindex_df` (
  `权重` double ,
  `ds` date ) 
 PARTITION BY RANGE(ds)(
-{}
+{partition_str}
 )
 DISTRIBUTED BY HASH(ds) BUCKETS 32
 PROPERTIES(
@@ -107,7 +111,7 @@ PROPERTIES(
     "dynamic_partition.buckets" = "32"
 )
 ;
-'''.format(partition_str, partition_str)
+'''
 
     ods_sql_str = '''
 SET SESSION query_timeout=1200;

@@ -9,6 +9,8 @@ import sys
 logger = get_logger(__name__)
 from utils.stock_zh_a_util import is_trade_date
 
+from utils.db_util import get_mysql_config
+
 
 if __name__ == '__main__':
     db = StarrocksDbUtil()
@@ -19,7 +21,9 @@ if __name__ == '__main__':
         exit(os.EX_OK)
 
     partition_str = generate_partition_spec(ds)
-    ddl_sql_str = '''
+    server_address, port, db_name, user, password = get_mysql_config()
+
+    ddl_sql_str = f'''
 CREATE TABLE if not exists `external_stock_individual_info_em` (
   `gmt_create` datetime ,
   `gmt_modified` datetime ,
@@ -35,11 +39,11 @@ CREATE TABLE if not exists `external_stock_individual_info_em` (
 )ENGINE = mysql 
 PROPERTIES
 (
-"host" = "192.168.50.100",
-"port" = "3306",
-"user" = "quant",
-"password" = "quant",
-"database" = "akshare_data",
+"host" = "{server_address}",
+"port" = "{port}",
+"user" = "{user}",
+"password" = "{password}",
+"database" = "{db_name}",
 "table" = "stock_individual_info_em"
 );
 
@@ -58,7 +62,7 @@ CREATE TABLE if not exists `ods_stock_individual_info_em` (
   `ds` date
  )
 PARTITION BY RANGE(ds)(
-    {}
+    {partition_str}
 )
 DISTRIBUTED BY HASH(ds) BUCKETS 32
 PROPERTIES(
@@ -87,7 +91,7 @@ CREATE TABLE if not exists `dwd_stock_individual_info_em_df` (
   `ds` date
  )
 PARTITION BY RANGE(ds)(
-{}
+{partition_str}
 )
 DISTRIBUTED BY HASH(ds) BUCKETS 32
 PROPERTIES(
@@ -100,7 +104,7 @@ PROPERTIES(
     "dynamic_partition.buckets" = "32"
 )
 ;
-'''.format(partition_str, partition_str)
+'''
 
     ods_sql_str = '''
 SET SESSION query_timeout=600;
