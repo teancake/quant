@@ -4,7 +4,8 @@ sys.path.append(parent_dir)
 
 
 from utils.log_util import get_logger
-from utils.starrocks_db_util import StarrocksDbUtil, generate_partition_spec, get_starrocks_config
+from utils.starrocks_db_util import StarrocksDbUtil, generate_partition_spec
+from utils.config_util import get_starrocks_config
 import sys
 import pandas as pd
 from datetime import datetime

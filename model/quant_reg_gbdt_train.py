@@ -318,7 +318,7 @@ def auto_tune():
     study = optuna.create_study(
         pruner=optuna.pruners.MedianPruner(n_warmup_steps=10), direction="minimize"
     )
-    study.optimize(train_optuna, n_trials=100)
+    study.optimize(train_optuna, n_trials=30)
 
     print("Number of finished trials: {}".format(len(study.trials)))
     print("Best trial:")

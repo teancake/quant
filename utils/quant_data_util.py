@@ -6,7 +6,7 @@ from uuid import uuid1
 from datetime import datetime, timedelta
 
 from utils.log_util import get_logger
-from starrocks_db_util import StarrocksDbUtil
+from utils.starrocks_db_util import StarrocksDbUtil
 from concurrent.futures import ProcessPoolExecutor, wait
 import numpy as np
 import uuid

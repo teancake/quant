@@ -11,7 +11,7 @@ import uuid
 
 from utils.log_util import get_logger
 
-from utils.starrocks_db_util import get_starrocks_config
+from utils.config_util import get_starrocks_config
 
 logger = get_logger(__name__)
 
@@ -90,7 +90,7 @@ class DataxProcessor:
                 }
             }
         '''
-        template = template.replace("$username", user).replace("$password", password).replace("$server_address",server_address).replace("$port", port).replace("$db_name", db_name)
+        template = template.replace("$username", user).replace("$password", password).replace("$server_address",server_address).replace("$port", str(port)).replace("$db_name", db_name)
         columns_str = "[" + ', '.join(f'"{c}"' for c in columns) + "]"
         conf_str = template.replace("$columns", columns_str).replace("$table", table).replace("$where", where)
         conf_str = conf_str.replace("$file_name", temp_file_prefix)
