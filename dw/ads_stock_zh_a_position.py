@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS `stock_zh_a_transaction`
   `名称`           varchar(20) COMMENT "",
   `action`       int comment "0 buy, 1 sell",
   `price`        double COMMENT "",
-  `lot`          int COMMENT ""
+  `amount`          int COMMENT ""
 )
 DISTRIBUTED BY HASH (`代码`) BUCKETS 32 PROPERTIES
 (
@@ -38,16 +38,16 @@ CREATE TABLE IF NOT EXISTS `ads_stock_zh_a_position`
   `名称`              varchar(20) COMMENT "",
   `buy_first_date`  datetime COMMENT "",
   `buy_recent_date` datetime COMMENT "",
-  `buy_lot` int COMMENT "",
+  `buy_amount` int COMMENT "",
   `buy_price_avg` decimal(10,2) COMMENT "",
   `buy_cost` decimal(10,2) COMMENT "",
   `buy_price_recent` decimal(10,2) COMMENT "",
   `sell_first_date` datetime NULL COMMENT "",
   `sell_recent_date` datetime NULL COMMENT "",
-  `sell_lot` int COMMENT "",
+  `sell_amount` int COMMENT "",
   `sell_price_avg` decimal(10,2) COMMENT "",
   `sell_cost` decimal(10,2) COMMENT "",
-  `position_lot` int COMMENT "",
+  `position` int COMMENT "",
   `return` decimal(10,2) COMMENT ""
 )
 DISTRIBUTED BY HASH (`代码`) BUCKETS 32 PROPERTIES
@@ -62,19 +62,19 @@ select buy.代码,
         buy.名称,
         buy_first_date,
         buy_recent_date,
-        buy_lot,
+        buy_amount,
         buy_price_avg,
         buy_cost,
         buy_price_recent,
         sell_first_date, 
         sell_recent_date, 
-        sell_lot,
+        sell_amount,
         sell_price_avg, 
         sell_cost,
-        buy_lot - coalesce(sell_lot, 0) as position_lot,
-        sell_price_avg * sell_lot * 100 - buy_price_avg * buy_lot * 100 - buy_cost - sell_cost as return
+        buy_amount - coalesce(sell_amount, 0) as position,
+        sell_price_avg * sell_amount - buy_price_avg * buy_amount - buy_cost - sell_cost as return
 from (
-  select a.*, buy_lot, buy_cost, buy_first_date, buy_recent_date, buy_price_avg
+  select a.*, buy_amount, buy_cost, buy_first_date, buy_recent_date, buy_price_avg
   from (
       select 代码, 名称, 
       price as buy_price_recent,
@@ -86,8 +86,8 @@ from (
     select 代码, 
            min(gmt_create) as buy_first_date, 
            max(gmt_create) as buy_recent_date, 
-           sum(lot) as buy_lot,
-           sum(price * lot) / sum(lot) as buy_price_avg,
+           sum(amount) as buy_amount,
+           sum(price * amount) / sum(amount) as buy_price_avg,
            count(*) * 5 as buy_cost
     from stock_zh_a_transaction
     where action = 0
@@ -97,8 +97,8 @@ from (
   and a.rn = 1
 ) buy
 left join (
-  select min(gmt_create) as sell_first_date, max(gmt_create) as sell_recent_date, 代码, sum(lot) as sell_lot,
-         sum(price * lot) / sum(lot) as sell_price_avg, count(*) * 5 as sell_cost
+  select min(gmt_create) as sell_first_date, max(gmt_create) as sell_recent_date, 代码, sum(amount) as sell_amount,
+         sum(price * amount) / sum(amount) as sell_price_avg, count(*) * 5 as sell_cost
   from stock_zh_a_transaction
   where action = 1
   group by 代码

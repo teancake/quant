@@ -41,7 +41,7 @@ def compute_technical_indicators(db_util, symbol, ds, backfill):
     ti_df["gmt_create"] = datetime.now()
     ti_df["gmt_modified"] = datetime.now()
     ti_df["代码"] = symbol
-    ti_df.to_sql(name="ods_stock_zh_a_ti_hist", con=db_util.get_db_engine(), if_exists='append', index=False, method='multi', chunksize=200)
+    ti_df.to_sql(name="ods_stock_zh_a_ti_hist", con=db_util.get_db_engine(), if_exists='append', index=False, method='multi', chunksize=2000)
     logger.info("indicators saved to db.")
 
 

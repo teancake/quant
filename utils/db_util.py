@@ -7,6 +7,16 @@ logger = get_logger(__name__)
 from utils.config_util import get_mysql_config
 
 
+def get_table_columns(table_name, ignore_ds):
+    res = DbUtil().run_sql(f"show columns from {table_name}")
+    if ignore_ds:
+        res = [item for item in res if item[0] != "ds"]
+    cols = [f"{item[0]} {item[1] if item[1] != 'text' else 'varchar(255)'}" for item in res]
+    col_names = [item[0] for item in res]
+    return cols, col_names
+
+
+
 # db
 # create database akshare_data;
 # CREATE USER 'quant'@'localhost' IDENTIFIED BY 'quant';

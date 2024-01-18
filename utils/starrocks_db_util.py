@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 
 logger = get_logger(__name__)
 from utils.config_util import get_starrocks_config
+from utils.db_util import get_table_columns, get_mysql_config
 
 
 def generate_partition_spec(ds:str):
@@ -16,6 +17,76 @@ def generate_partition_spec(ds:str):
 
 def get_days_ahead_ds(ds, days):
     return (datetime.strptime(ds, '%Y%m%d') - timedelta(days=days)).strftime("%Y%m%d")
+
+
+def run_ods_tasks(mysql_table_name, ds):
+    cols, col_names = get_table_columns(mysql_table_name, ignore_ds=True)
+    mysql_columns_str = ", ".join(cols)
+    mysql_column_names_str = ", ".join(col_names)
+    ods_table_name = f"ods_{mysql_table_name}"
+    dwd_table_name = f"dwd_{mysql_table_name}_di"
+
+    server_address, port, db_name, user, password = get_mysql_config()
+
+    ods_sql_str = f'''
+        CREATE TABLE IF NOT EXISTS `external_{mysql_table_name}` ( 
+         {mysql_columns_str}
+        )
+        ENGINE = mysql 
+        PROPERTIES
+        (
+        "host" = "{server_address}",
+        "port" = "{port}",
+        "user" = "{user}",
+        "password" = "{password}",
+        "database" = "{db_name}",
+        "table" = "{mysql_table_name}"
+        );
+
+        CREATE TABLE IF NOT EXISTS {ods_table_name} (
+        {mysql_columns_str},
+        ds date
+        ) 
+        PARTITION BY RANGE(ds)({generate_partition_spec(ds)})
+        DISTRIBUTED BY HASH(ds) BUCKETS 32
+        PROPERTIES(
+            "replication_num" = "1",
+            "dynamic_partition.enable" = "true",
+            "dynamic_partition.time_unit" = "DAY",
+            "dynamic_partition.start" = "-365",
+            "dynamic_partition.end" = "7",
+            "dynamic_partition.prefix" = "p",
+            "dynamic_partition.buckets" = "32"
+        )
+        ;
+
+        INSERT OVERWRITE {ods_table_name} PARTITION(p{ds})
+        select 
+        {mysql_column_names_str},
+        {ds} as ds
+        from 
+        external_{mysql_table_name}
+        where DATE_FORMAT(gmt_create, '%Y%m%d') = {ds}
+        ;
+        '''
+
+    dwd_sql_str = f'''
+        CREATE TABLE if not exists {dwd_table_name} LIKE {ods_table_name};
+        INSERT OVERWRITE {dwd_table_name} PARTITION(p{ds})
+        select distinct 
+        {mysql_column_names_str},
+        ds
+        from 
+        {ods_table_name} 
+        where ds = '{ds}'
+        ;
+        '''
+    db = StarrocksDbUtil()
+    db.run_sql(ods_sql_str)
+    logger.info("ods sql finished.")
+    db.run_sql(dwd_sql_str)
+    logger.info("dwd sql finished.")
+
 
 
 

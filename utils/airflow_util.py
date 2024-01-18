@@ -1,6 +1,6 @@
 from airflow.utils.email import send_email
 from datetime import timedelta
-
+from airflow.sensors.date_time import DateTimeSensor
 
 def get_default_args():
     return {'email_on_failure': False, "email": ["bowmore.alert@outlook.com"],
@@ -53,3 +53,11 @@ def send_email_with_failure_info(context: dict):
             </table>"""
     subject = f'Airflow {task_id} 任务报警'
     send_email(email, subject, msg)
+
+
+def wait_till(hour: int, minute: int, second: int):
+    target_time_str = f'next_execution_date.in_tz("Asia/Shanghai").replace(hour={hour}, minute={minute}, second={second})'
+    task_id_str = f"wait_till_{hour:02d}{minute:02d}{second:02d}"
+    return DateTimeSensor(
+        task_id=task_id_str, target_time="{{ " + target_time_str + " }}", poke_interval=60
+    )
