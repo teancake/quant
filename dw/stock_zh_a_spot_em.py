@@ -35,9 +35,6 @@ class StockZhASpotEm(BaseData):
     def get_table_name(self):
         return "stock_zh_a_spot_em"
 
-    def get_ds(self):
-        return datetime.now().strftime("%Y%m%d")
-
     def get_df_schema(self):
         df = ak.stock_zh_a_spot_em()
         df_schema = df

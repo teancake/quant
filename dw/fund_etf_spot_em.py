@@ -31,9 +31,6 @@ class FundEtfSpotEm(BaseData):
     def get_table_name(self):
         return "fund_etf_spot_em"
 
-    def get_ds(self):
-        return datetime.now().strftime("%Y%m%d")
-
     def get_df_schema(self):
         df = ak.fund_etf_spot_em()
         df_schema = df

@@ -21,7 +21,7 @@ class BaseData(ABC):
         self.db = DbUtil()
         self.engine = self.db.get_db_engine()
         self.table_name = self.get_table_name()
-        self.ds = self.get_ds()
+        self.ds = self.generate_default_ds()
         logger.info("db connection established.")
 
     def ds_exists(self, ds):
@@ -36,6 +36,9 @@ class BaseData(ABC):
         results = self.db.run_sql("delete from {} where {}".format(self.get_table_name(), conditions))
         print(results)
 
+    def generate_default_ds(self):
+        return datetime.now().strftime("%Y%m%d")
+
     def set_ds(self, ds):
         self.ds = ds
 
@@ -48,10 +51,6 @@ class BaseData(ABC):
 
     @abstractmethod
     def get_table_name(self):
-        pass
-
-    @abstractmethod
-    def get_ds(self):
         pass
 
     @abstractmethod

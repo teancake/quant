@@ -34,9 +34,6 @@ class StockIndividualInfoEm(BaseData):
     def get_table_name(self):
         return "stock_individual_info_em"
 
-    def get_ds(self):
-        return (datetime.now() - timedelta(days=1)).strftime("%Y%m%d")
-
     def before_retrieve_data(self):
         pass
 

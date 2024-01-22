@@ -18,10 +18,5 @@ if __name__ == '__main__':
         logger.info(f"{ds} is not trade date. task exits.")
         exit(os.EX_OK)
 
-    mysql_table_name = "fund_lof_spot_em"
-    mysql_to_ods_dwd(mysql_table_name, ds)
-
-
-
-
-
+    mysql_table_name = "fund_etf_hist_em"
+    mysql_to_ods_dwd(mysql_table_name, ds, di_df="df", unique_columns=["日期", "symbol", "period", "adjust"])

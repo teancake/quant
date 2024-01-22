@@ -35,9 +35,6 @@ class IndexStockCons(BaseData):
     def get_table_name(self):
         return "index_stock_cons_weight_csindex"
 
-    def get_ds(self):
-        return datetime.now().strftime("%Y%m%d")
-
     def get_df_schema(self):
         # 目前只考虑 上证指数、上证50、 沪深300、深证成指、中证500
         index_symbols = ["000001", "000016", "000300", "399001", "399905"]

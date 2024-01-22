@@ -32,9 +32,6 @@ class FundLofSpotEm(BaseData):
     def get_table_name(self):
         return "fund_lof_spot_em"
 
-    def get_ds(self):
-        return datetime.now().strftime("%Y%m%d")
-
     def get_df_schema(self):
         df = ak.fund_lof_spot_em()
         df_schema = df

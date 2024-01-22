@@ -2,7 +2,6 @@ import sys, os
 parent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 sys.path.append(parent_dir)
 
-
 import akshare as ak
 import pandas as pd
 from datetime import datetime, timedelta
@@ -13,26 +12,29 @@ from base_data import BaseData
 from utils import stock_zh_a_util
 from utils.stock_zh_a_util import is_trade_date
 
-
 logger = get_logger(__name__)
 
 import time
 import sys
+import re
+import traceback
+
+
 
 '''
-历史行情数据-东财
-接口: stock_zh_a_hist
+LOF基金历史行情-东财
+接口: fund_lof_hist_em
 
-目标地址: https://quote.eastmoney.com/concept/sh603777.html?from=classic(示例)
+目标地址: https://quote.eastmoney.com/sz166009.html
 
-描述: 东方财富-沪深京 A 股日频率数据; 历史数据按日频率更新, 当日收盘价请在收盘后获取
+描述: 东方财富-LOF 行情; 历史数据按日频率更新, 当日收盘价请在收盘后获取
 
-限量: 单次返回指定沪深京 A 股上市公司、指定周期和指定日期间的历史行情日频率数据
+限量: 单次返回指定 LOF、指定周期和指定日期间的历史行情日频率数据
 
 '''
 
 
-class StockZhAHist(BaseData):
+class FundLofHistEm(BaseData):
     def __init__(self, symbol=None, backfill=False, period_list=None):
         self.symbol = symbol
         self.backfill = backfill
@@ -47,7 +49,7 @@ class StockZhAHist(BaseData):
         self.symbol = symbol
 
     def get_table_name(self):
-        return "stock_zh_a_hist"
+        return "fund_lof_hist_em"
 
     def before_retrieve_data(self):
         pass
@@ -70,16 +72,17 @@ class StockZhAHist(BaseData):
     def get_single_df(self, symbol, period, adjust, ds, backfill):
         # restrict end data to ds
         if backfill:
-            df = ak.stock_zh_a_hist(symbol=symbol, period=period, adjust=adjust, end_date=ds, timeout=60)
+            df = ak.fund_lof_hist_em(symbol=symbol, period=period, adjust=adjust, end_date=ds)
         else:
             start_date = (datetime.strptime(ds, '%Y%m%d') - timedelta(days=7)).strftime("%Y%m%d")
-            df = ak.stock_zh_a_hist(symbol=symbol, period=period, adjust=adjust, start_date=start_date, end_date=ds, timeout=60)
+            df = ak.fund_lof_hist_em(symbol=symbol, period=period, adjust=adjust, start_date=start_date, end_date=ds)
 
         logger.info("data retrieved, number of rows {}".format(df.shape[0]))
         df.insert(0, "symbol", symbol)
         df.insert(1, "period", period)
         df.insert(2, "adjust", adjust)
         return df
+
 
 
 if __name__ == '__main__':
@@ -91,23 +94,19 @@ if __name__ == '__main__':
 
     period_list = ["daily"] if len(sys.argv) <= 2 else [sys.argv[2]]
     weekday = datetime.strptime(ds, "%Y%m%d").isoweekday()
+
     ## do backfill every Friday
     backfill = True if weekday == 5 else False
     logger.info("ds {}, execute {} task, backfill {}".format(ds, period_list, backfill))
-    data = StockZhAHist(backfill=backfill, period_list=period_list)
+
+    data = FundLofHistEm(backfill=backfill, period_list=period_list)
     data.set_ds(ds)
-    symbol_list = stock_zh_a_util.get_stock_list()
+    symbol_list = stock_zh_a_util.get_fund_lof_list()
     for symbol in symbol_list:
         logger.info("process symbol {}".format(symbol))
         data.set_symbol(symbol)
         data.retrieve_data()
         logger.info("symbol {} done".format(symbol))
 
-    # if backfill:
-    #     delete_ds = (datetime.strptime(ds, '%Y%m%d') - timedelta(days=14)).strftime("%Y%m%d")
-    #     logger.info("clearing historical data after back fill, data before ds {} will be deleted.".format(delete_ds))
-    #     cond = "ds <= '{}'".format(delete_ds)
-    #     data.delete_records(conditions=cond)
-    #     logger.info("clearing historical data done.")
-
     data.clean_up_history(lifecycle=15)
+

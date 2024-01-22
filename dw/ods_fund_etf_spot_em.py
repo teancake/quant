@@ -4,7 +4,7 @@ parent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 sys.path.append(parent_dir)
 
 from utils.log_util import get_logger
-from utils.starrocks_db_util import run_ods_tasks
+from utils.starrocks_db_util import mysql_to_ods_dwd
 from utils.stock_zh_a_util import is_trade_date
 
 import sys
@@ -19,7 +19,7 @@ if __name__ == '__main__':
         exit(os.EX_OK)
 
     mysql_table_name = "fund_etf_spot_em"
-    run_ods_tasks(mysql_table_name, ds)
+    mysql_to_ods_dwd(mysql_table_name, ds)
 
 
 

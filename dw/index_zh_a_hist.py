@@ -51,11 +51,6 @@ class IndexZhAHist(BaseData):
     def get_table_name(self):
         return "index_zh_a_hist"
 
-    def get_ds(self):
-        # return (datetime.now() - timedelta(days=1)).strftime("%Y%m%d")
-        return datetime.now().strftime("%Y%m%d")
-
-
     def before_retrieve_data(self):
         pass
 

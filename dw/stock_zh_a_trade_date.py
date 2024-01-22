@@ -19,9 +19,6 @@ class StockZhATradeDate(BaseData):
     def get_table_name(self):
         return "stock_zh_a_trade_date"
 
-    def get_ds(self):
-        return datetime.now().strftime("%Y%m%d")
-
     def get_df_schema(self):
         df = ak.tool_trade_date_hist_sina()
         df_schema = df[["trade_date"]]

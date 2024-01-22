@@ -28,9 +28,6 @@ class StockZhIndex(BaseData):
     def get_table_name(self):
         return "stock_zh_index"
 
-    def get_ds(self):
-        return datetime.now().strftime("%Y%m%d")
-
     def get_df_schema(self):
         df = ak.stock_zh_index_spot()
         df_schema = df[["代码", "名称"]]

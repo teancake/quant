@@ -19,12 +19,17 @@ def get_days_ahead_ds(ds, days):
     return (datetime.strptime(ds, '%Y%m%d') - timedelta(days=days)).strftime("%Y%m%d")
 
 
-def run_ods_tasks(mysql_table_name, ds):
+def mysql_to_ods_dwd(mysql_table_name, ds, di_df="di", unique_columns=None):
     cols, col_names = get_table_columns(mysql_table_name, ignore_ds=True)
     mysql_columns_str = ", ".join(cols)
     mysql_column_names_str = ", ".join(col_names)
     ods_table_name = f"ods_{mysql_table_name}"
-    dwd_table_name = f"dwd_{mysql_table_name}_di"
+    dwd_table_name = f"dwd_{mysql_table_name}_{di_df}"
+
+    if unique_columns is not None and len(unique_columns) > 0:
+        unique_columns_str = ",".join(unique_columns)
+    else:
+        unique_columns_str = mysql_column_names_str
 
     server_address, port, db_name, user, password = get_mysql_config()
 
@@ -53,7 +58,7 @@ def run_ods_tasks(mysql_table_name, ds):
             "replication_num" = "1",
             "dynamic_partition.enable" = "true",
             "dynamic_partition.time_unit" = "DAY",
-            "dynamic_partition.start" = "-365",
+            "dynamic_partition.start" = "-62",
             "dynamic_partition.end" = "7",
             "dynamic_partition.prefix" = "p",
             "dynamic_partition.buckets" = "32"
@@ -71,21 +76,30 @@ def run_ods_tasks(mysql_table_name, ds):
         '''
 
     dwd_sql_str = f'''
-        CREATE TABLE if not exists {dwd_table_name} LIKE {ods_table_name};
-        INSERT OVERWRITE {dwd_table_name} PARTITION(p{ds})
-        select distinct 
+        CREATE TABLE IF NOT EXISTS {dwd_table_name} LIKE {ods_table_name};
+        INSERT OVERWRITE {dwd_table_name} PARTITION(p{ds})'''
+
+    ds_start = ds if di_df == "di" else get_days_ahead_ds(ds, 8)
+
+    select_str = f'''
+        select 
         {mysql_column_names_str},
-        ds
+        ds from (select *,
+        row_number() over (partition by {unique_columns_str} order by gmt_create desc) as rn
         from 
         {ods_table_name} 
-        where ds = '{ds}'
-        ;
-        '''
+        where ds >= '{ds_start}'
+        )a where rn = 1
+    '''
+
+    dwd_sql_str += select_str
     db = StarrocksDbUtil()
     db.run_sql(ods_sql_str)
     logger.info("ods sql finished.")
+    db.dqc_row_count(ods_table_name, ds)
     db.run_sql(dwd_sql_str)
     logger.info("dwd sql finished.")
+    db.dqc_row_count(dwd_table_name, ds)
 
 
 
