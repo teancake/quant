@@ -7,6 +7,68 @@ logger = get_logger(__name__)
 from utils.config_util import get_starrocks_config
 from utils.db_util import get_table_columns, get_mysql_config
 
+# CREATE DATABASE akshare_data;
+# CREATE USER 'quant'@'%' IDENTIFIED BY 'quant';
+# GRANT ALL PRIVILEGES ON DATABASE akshare_data TO 'quant'@'%'  WITH GRANT OPTION;
+
+
+
+# backup and restore
+# CREATE REPOSITORY akshare_data_backup
+# WITH BROKER
+# ON LOCATION "oss://bourgogne/starrocks_backup"
+# PROPERTIES(
+#     "fs.oss.accessKeyId" = "LTAxxxxx"
+#     "fs.oss.accessKeySecret" = "xxxx",
+#     "fs.oss.endpoint" = "oss-cn-beijing.aliyuncs.com"
+# );
+#
+#
+# BACKUP SNAPSHOT akshare_data.stock_zh_a_transaction_backup
+# TO akshare_data_backup
+# ON (stock_zh_a_transaction);
+#
+#
+# BACKUP SNAPSHOT akshare_data.ods_stock_zh_a_prediction_backup
+# TO akshare_data_backup
+# ON (ods_stock_zh_a_prediction);
+#
+# BACKUP SNAPSHOT akshare_data.ads_stock_zh_a_position_backup
+# TO akshare_data_backup
+# ON (ads_stock_zh_a_position);
+#
+# BACKUP SNAPSHOT akshare_data.ads_stock_zh_a_pred_data_backup
+# TO akshare_data_backup
+# ON (ads_stock_zh_a_pred_data);
+#
+#
+# SHOW BACKUP;
+#
+#
+# SHOW SNAPSHOT ON akshare_data_backup;
+#
+#
+#
+# RESTORE SNAPSHOT akshare_data.stock_zh_a_transaction_backup
+# FROM akshare_data_backup
+# ON (stock_zh_a_transaction)
+# PROPERTIES (
+#     "backup_timestamp"="2024-01-28-18-24-11-465",
+#     "replication_num" = "1"
+# );
+#
+#
+# RESTORE SNAPSHOT akshare_data.ods_stock_zh_a_prediction_backup
+# FROM akshare_data_backup
+# ON (ods_stock_zh_a_prediction)
+# PROPERTIES (
+#     "backup_timestamp"="2024-01-28-18-36-31-019",
+#     "replication_num" = "1"
+# );
+#
+#
+# SHOW RESTORE;
+
 
 def generate_partition_spec(ds:str):
     ds_m30 = (datetime.strptime(ds, '%Y%m%d') - timedelta(days=30)).strftime("%Y%m%d")
@@ -84,7 +146,8 @@ def mysql_to_ods_dwd(mysql_table_name, ds, di_df="di", unique_columns=None):
     select_str = f'''
         select 
         {mysql_column_names_str},
-        ds from (select *,
+        {ds} as ds 
+        from (select *,
         row_number() over (partition by {unique_columns_str} order by gmt_create desc) as rn
         from 
         {ods_table_name} 

@@ -82,6 +82,12 @@ class StockZhAHist(BaseData):
         return df
 
 
+    def get_downloaded_symbols(self):
+        sql = f"SELECT distinct symbol from {self.get_table_name()}  where ds = '{self.ds}'"
+        recs = self.db.run_sql(sql)
+        return [rec[0] for rec in recs]
+
+
 if __name__ == '__main__':
     ds = sys.argv[1]
     logger.info("execute task on ds {}".format(ds))
@@ -97,8 +103,12 @@ if __name__ == '__main__':
     data = StockZhAHist(backfill=backfill, period_list=period_list)
     data.set_ds(ds)
     symbol_list = stock_zh_a_util.get_stock_list()
+    downloaded_symbols = data.get_downloaded_symbols()
     for symbol in symbol_list:
         logger.info("process symbol {}".format(symbol))
+        if symbol in downloaded_symbols:
+            logger.info(f"symbol {symbol} already downloaded. skip downloading.")
+            continue
         data.set_symbol(symbol)
         data.retrieve_data()
         logger.info("symbol {} done".format(symbol))

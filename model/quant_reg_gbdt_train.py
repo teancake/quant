@@ -281,9 +281,9 @@ def train_optuna(trial):
         "boosting_type": boosting_type,
         "objective": "regression",
         # "objective": "huber",
-        "alpha": 5.0,
+        # "alpha": 5.0,
         "verbosity": -1,
-        'learning_rate': trial.suggest_float("learning_rate", 0.0001, 0.1, log=True),
+        'learning_rate': trial.suggest_float("learning_rate", 0.001, 0.1, log=True),
         "max_depth": trial.suggest_int("max_depth", 3, 50),
         "lambda_l1": trial.suggest_float("lambda_l1", 1e-8, 10.0, log=True),
         "lambda_l2": trial.suggest_float("lambda_l2", 1e-8, 10.0, log=True),
@@ -294,7 +294,7 @@ def train_optuna(trial):
         "min_child_samples": trial.suggest_int("min_child_samples", 5, 1000),
         "max_bin": trial.suggest_int("max_bin", 5, 5000),
         "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 5, 10000, log=True),
-        "num_iterations": trial.suggest_int("num_iterations", 100, 500)
+        "num_iterations": trial.suggest_int("num_iterations", 50, 200)
     }
 
     dtrain = lgb.Dataset(train_x, label=train_y, feature_name=feature_names,

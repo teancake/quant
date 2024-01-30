@@ -1,7 +1,7 @@
 import nacos
 import yaml
 
-NAMESPACE = "86eb73b4-0a4e-420f-9363-238ab6ac9471"
+NAMESPACE = "641b1e6b-f964-4350-bda8-b55ba5d3d338"
 SERVER_ADDRESSES = "http://192.168.50.228:31232"
 client = nacos.NacosClient(SERVER_ADDRESSES, namespace=NAMESPACE)
 
