@@ -81,7 +81,7 @@ def get_days_ahead_ds(ds, days):
     return (datetime.strptime(ds, '%Y%m%d') - timedelta(days=days)).strftime("%Y%m%d")
 
 
-def mysql_to_ods_dwd(mysql_table_name, ds, di_df="di", unique_columns=None):
+def mysql_to_ods_dwd(mysql_table_name, ds, di_df="di", unique_columns=None, days_ahead=15):
     cols, col_names = get_table_columns(mysql_table_name, ignore_ds=True)
     mysql_columns_str = ", ".join(cols)
     mysql_column_names_str = ", ".join(col_names)
@@ -141,7 +141,7 @@ def mysql_to_ods_dwd(mysql_table_name, ds, di_df="di", unique_columns=None):
         CREATE TABLE IF NOT EXISTS {dwd_table_name} LIKE {ods_table_name};
         INSERT OVERWRITE {dwd_table_name} PARTITION(p{ds})'''
 
-    ds_start = ds if di_df == "di" else get_days_ahead_ds(ds, 8)
+    ds_start = ds if di_df == "di" else get_days_ahead_ds(ds, days_ahead)
 
     select_str = f'''
         select 

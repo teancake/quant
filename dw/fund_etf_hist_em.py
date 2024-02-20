@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from utils.log_util import get_logger
 from base_data import BaseData
 from utils import stock_zh_a_util
-from utils.stock_zh_a_util import is_trade_date
+from utils.stock_zh_a_util import is_trade_date, is_backfill
 
 logger = get_logger(__name__)
 
@@ -93,10 +93,7 @@ if __name__ == '__main__':
         exit(os.EX_OK)
 
     period_list = ["daily"] if len(sys.argv) <= 2 else [sys.argv[2]]
-    weekday = datetime.strptime(ds, "%Y%m%d").isoweekday()
-
-    ## do backfill every Friday
-    backfill = True if weekday == 5 else False
+    backfill = is_backfill(ds)
     logger.info("ds {}, execute {} task, backfill {}".format(ds, period_list, backfill))
 
     data = FundEtfHistEm(backfill=backfill, period_list=period_list)

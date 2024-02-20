@@ -149,7 +149,7 @@ from
 external_index_zh_a_hist 
 where ds >= '{}'
 ;
-    '''.format(ds, ds, get_days_ahead_ds(ds, 8))
+    '''.format(ds, ds, get_days_ahead_ds(ds, 15))
 
     dwd_sql_str = '''
 SET SESSION query_timeout=600;

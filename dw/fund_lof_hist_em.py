@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from utils.log_util import get_logger
 from base_data import BaseData
 from utils import stock_zh_a_util
-from utils.stock_zh_a_util import is_trade_date
+from utils.stock_zh_a_util import is_trade_date, is_backfill
 
 logger = get_logger(__name__)
 
@@ -71,16 +71,20 @@ class FundLofHistEm(BaseData):
 
     def get_single_df(self, symbol, period, adjust, ds, backfill):
         # restrict end data to ds
-        if backfill:
-            df = ak.fund_lof_hist_em(symbol=symbol, period=period, adjust=adjust, end_date=ds)
-        else:
-            start_date = (datetime.strptime(ds, '%Y%m%d') - timedelta(days=7)).strftime("%Y%m%d")
-            df = ak.fund_lof_hist_em(symbol=symbol, period=period, adjust=adjust, start_date=start_date, end_date=ds)
+        try:
+            if backfill:
+                df = ak.fund_lof_hist_em(symbol=symbol, period=period, adjust=adjust, end_date=ds)
+            else:
+                start_date = (datetime.strptime(ds, '%Y%m%d') - timedelta(days=7)).strftime("%Y%m%d")
+                df = ak.fund_lof_hist_em(symbol=symbol, period=period, adjust=adjust, start_date=start_date, end_date=ds)
 
-        logger.info("data retrieved, number of rows {}".format(df.shape[0]))
-        df.insert(0, "symbol", symbol)
-        df.insert(1, "period", period)
-        df.insert(2, "adjust", adjust)
+            logger.info("data retrieved, number of rows {}".format(df.shape[0]))
+            df.insert(0, "symbol", symbol)
+            df.insert(1, "period", period)
+            df.insert(2, "adjust", adjust)
+        except Exception as e:
+            logger.error(traceback.format_exc())
+            df = pd.DataFrame()
         return df
 
 
@@ -93,10 +97,7 @@ if __name__ == '__main__':
         exit(os.EX_OK)
 
     period_list = ["daily"] if len(sys.argv) <= 2 else [sys.argv[2]]
-    weekday = datetime.strptime(ds, "%Y%m%d").isoweekday()
-
-    ## do backfill every Friday
-    backfill = True if weekday == 5 else False
+    backfill = is_backfill(ds)
     logger.info("ds {}, execute {} task, backfill {}".format(ds, period_list, backfill))
 
     data = FundLofHistEm(backfill=backfill, period_list=period_list)

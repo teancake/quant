@@ -20,3 +20,10 @@ def get_starrocks_config():
     conf = client.get_config(data_id, group)
     conf = yaml.safe_load(conf)
     return conf["server_address"], conf["port"], conf["db_name"], conf["user_name"], conf["password"]
+
+
+def get_data_config():
+    data_id = "quant-data.yml"
+    conf = client.get_config(data_id, group)
+    conf = yaml.safe_load(conf)
+    return conf

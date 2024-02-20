@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 
-from utils.stock_zh_a_util import is_trade_date
+from utils.stock_zh_a_util import is_trade_date, is_backfill
 
 logger = get_logger(__name__)
 
@@ -53,9 +53,7 @@ if __name__ == '__main__':
         logger.info(f"{ds} is not trade date. task exits.")
         exit(os.EX_OK)
 
-    weekday = datetime.strptime(ds, "%Y%m%d").isoweekday()
-    ## do backfill every Friday
-    backfill = True if weekday == 5 else False
+    backfill = is_backfill(ds)
     logger.info("execute task on ds {}, backfill {}".format(ds, backfill))
 
     partition_str = generate_partition_spec(ds)
