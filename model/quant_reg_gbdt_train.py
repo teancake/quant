@@ -159,11 +159,14 @@ def get_most_important_features(fi, fn):
 def prepare_data(train_file_name, pred_file_name, use_roc_label, use_log_close, use_sqrt_roc, numerical_features,
                  categorical_features, label_name=""):
 
-    dataset = quant_data_util.load_data(train_file_name, pred_file_name)
-    train_data, test_data, pred_data, scaler, encoder, enc_column_names = dataset
-
     if label_name is None or len(label_name) == 0:
         label_name = "label_roc" if use_roc_label else "label_close"
+
+    dataset = quant_data_util.load_data(train_file_name, pred_file_name, categorical_column_names=categorical_features,
+                                        label_column_names=[label_name])
+    train_data, test_data, pred_data, scaler, encoder, enc_column_names = dataset
+
+
     ext_column_names = ["日期", "代码", "roc", "close", "label_roc", "label_close", "label_roi_1d", "label_roi_2d",
                         "label_roi_3d", "label_roi_5d", "label_roi_10d"]
 

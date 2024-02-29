@@ -1,9 +1,33 @@
 from datetime import datetime, timedelta
+
+import pandas as pd
+
 from utils.db_util import DbUtil
+from utils.starrocks_db_util import StarrocksDbUtil
 from utils.config_util import get_data_config
 from utils.log_util import get_logger
 
 logger = get_logger(__name__)
+
+def get_benchmark_data(symbol, ds, start_date):
+    results = StarrocksDbUtil().run_sql(f"SELECT * FROM dwd_index_zh_a_hist_df WHERE ds='{ds}' and 代码='{symbol}' and 日期 >= '{start_date}'")
+    df = pd.DataFrame(results)
+    if not df.empty:
+        df.set_index("日期", inplace=True)
+        df.index = pd.to_datetime(df.index)
+    return df
+
+
+def get_stock_data(symbol, ds, start_date):
+    if symbol == "all":
+        results = StarrocksDbUtil().run_sql(f"SELECT * FROM dwd_stock_zh_a_hist_df WHERE ds='{ds}' and 日期 > '{start_date}'")
+    else:
+        results = StarrocksDbUtil().run_sql(f"SELECT * FROM dwd_stock_zh_a_hist_df WHERE ds='{ds}' and 代码='{symbol}' and 日期 >= '{start_date}'")
+    df = pd.DataFrame(results)
+    if not df.empty:
+        df.set_index("日期", inplace=True)
+        df.index = pd.to_datetime(df.index)
+    return df
 
 
 def get_stock_map():

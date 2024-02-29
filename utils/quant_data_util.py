@@ -311,9 +311,14 @@ def sync_training_data(ds):
     db_to_csv(pred_file_name, pred_table_name, columns=pred_table_columns)
 
 
-def load_data(train_file_name, pred_file_name, standardize_column_names=None, categorical_column_names=None):
+def load_data(train_file_name, pred_file_name, standardize_column_names=None, categorical_column_names=None,
+              label_column_names=None):
     column_types = {"代码": str}
     parse_dates = ["日期"]
+    if categorical_column_names is not None and len(categorical_column_names) > 0:
+        for name in categorical_column_names:
+            column_types[name] = str
+    print(f"categorical_column_names {categorical_column_names}, column types {column_types}")
     all_data = df_from_csv(train_file_name, column_types, parse_dates)
     pred_data = df_from_csv(pred_file_name, column_types, parse_dates)
 
@@ -337,9 +342,9 @@ def load_data(train_file_name, pred_file_name, standardize_column_names=None, ca
 
 
     # dealing with missing values
-    train_data = fill_missing_values(train_data)
-    test_data = fill_missing_values(test_data)
-    pred_data = fill_missing_values(pred_data)
+    train_data = handle_missing_values(train_data, label_column_names)
+    test_data = handle_missing_values(test_data, label_column_names)
+    pred_data = handle_missing_values(pred_data)
 
     logger.info("train data columns {}".format(train_data.columns))
     logger.info("test data columns {}".format(test_data.columns))
@@ -348,9 +353,11 @@ def load_data(train_file_name, pred_file_name, standardize_column_names=None, ca
     return train_data, test_data, pred_data, scaler, encoder, enc_column_names
 
 
-def fill_missing_values(df):
-    return df.fillna(0)
-
+def handle_missing_values(df, label_column_names=None):
+    if label_column_names is None:
+        label_column_names = []
+    df = df.dropna(subset=label_column_names)
+    return df
 
 def restore_standardized_data(df, scaler):
     return scaler.inverse_transform(df)
@@ -423,7 +430,8 @@ def get_sequential_data(train_file_name, pred_file_name, sequential_data_file_na
         load_from_db = 0
         dataset = load_data(train_file_name, pred_file_name,
                             standardize_column_names=standardize_column_names,
-                            categorical_column_names=cat_columns)
+                            categorical_column_names=cat_columns,
+                            label_column_names=label_columns)
         train_data, test_data, pred_data, scaler, encoder, enc_column_names = dataset
 
         train_data = train_data[train_data["日期"] > train_data["日期"].max() - timedelta(days=730)]

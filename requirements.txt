@@ -21,3 +21,5 @@ ta_cn[cn]
 fire
 nacos-sdk-python
 joblib
+quantstats
+ipython
