@@ -34,6 +34,8 @@ def metrics_bootstrap(ds, start_date, benchmark_symbol):
     benchmark = get_benchmark_data(benchmark_symbol, ds, start_date)
     benchmark = benchmark["涨跌幅"] / 100
     benchmark.name = benchmark_symbol
+    sorted_index = np.argsort(benchmark.index)
+    benchmark = benchmark.iloc[sorted_index]
 
     metrics = qs.reports.metrics(benchmark, benchmark, mode="full", display=False)
 
@@ -47,11 +49,15 @@ def metrics_bootstrap(ds, start_date, benchmark_symbol):
 
 def get_one_stock_metrics(stock_symbol, stock, benchmark):
     row = []
+    logger.info(f"computing metrics for {stock_symbol}, stock data size {len(stock)}, benchmark size {len(benchmark)}")
     if stock.empty:
         logger.info(f"stock {stock_symbol} empty data.")
         return row
     stock = stock["涨跌幅"] / 100
     stock.name = stock_symbol
+    sorted_index = np.argsort(stock.index)
+    stock = stock.iloc[sorted_index]
+
     if len(stock) < 90:
         logger.info(f"stock {stock_symbol} size {len(stock)}, not enough data.")
         return row
@@ -62,16 +68,18 @@ def get_one_stock_metrics(stock_symbol, stock, benchmark):
     except:
         logger.error(f"Exception occurred, stock {stock_symbol}")
         logger.error(traceback.format_exc())
+    logger.info(f"metrics computation finished, values {row}")
     return row
 
 
-def compute_metrics(ds):
+def compute_metrics(ds, stock_symbols=None):
     start_date = (datetime.strptime(ds, '%Y%m%d') - timedelta(days=190)).strftime("%Y-%m-%d")
     benchmark_symbol = "sh000300"
     met_wide, benchmark = metrics_bootstrap(ds, start_date, benchmark_symbol)
     stocks = get_stock_data("all", ds, start_date)
-    stock_symbols = get_stock_list()
-    results = Parallel(n_jobs=4)(delayed(get_one_stock_metrics)(symbol, stocks[stocks["代码"]==symbol], benchmark) for symbol in stock_symbols)
+    if stock_symbols is None or len(stock_symbols) == 0:
+        stock_symbols = get_stock_list()
+    results = Parallel(n_jobs=4, backend="multiprocessing")(delayed(get_one_stock_metrics)(symbol, stocks[stocks["代码"]==symbol], benchmark) for symbol in stock_symbols)
     results = [row for row in results if len(row) > 0]
     met_wide = pd.concat([met_wide, pd.DataFrame(data=results, columns=met_wide.columns)])
     met_wide = handle_special_values(met_wide)
@@ -93,6 +101,7 @@ def compute_report(ds="20240228", stock_symbol="600066"):
     stock = get_stock_data(stock_symbol, ds, start_date)
     stock = stock["涨跌幅"] / 100
     stock.name = stock_symbol
+    logger.info(f"computing metrics for {stock_symbol}, stock data size {len(stock)}, value {stock}")
     qs.reports.html(stock, benchmark, output="test.html")
     logger.info("report generated.")
 
@@ -117,3 +126,6 @@ if __name__ == '__main__':
     data = StockZhAStats()
     data.set_ds(ds)
     data.retrieve_data()
+
+    # compute_report("20240229", "301338")
+    # compute_metrics("20240229", ["300234","301337","301338"])

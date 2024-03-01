@@ -20,7 +20,7 @@ def get_benchmark_data(symbol, ds, start_date):
 
 def get_stock_data(symbol, ds, start_date):
     if symbol == "all":
-        results = StarrocksDbUtil().run_sql(f"SELECT * FROM dwd_stock_zh_a_hist_df WHERE ds='{ds}' and 日期 > '{start_date}'")
+        results = StarrocksDbUtil().run_sql(f"SELECT * FROM dwd_stock_zh_a_hist_df WHERE ds='{ds}' and 日期 >= '{start_date}'")
     else:
         results = StarrocksDbUtil().run_sql(f"SELECT * FROM dwd_stock_zh_a_hist_df WHERE ds='{ds}' and 代码='{symbol}' and 日期 >= '{start_date}'")
     df = pd.DataFrame(results)
