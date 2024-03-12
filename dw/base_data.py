@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 from utils.log_util import get_logger
 from utils.db_util import DbUtil
 from datetime import datetime, timedelta
+import pytz
 
 from requests.exceptions import RequestException
 
@@ -57,7 +58,7 @@ class BaseData(ABC):
     def before_retrieve_data(self):
         pass
 
-    def get_df_schema_with_retry(self, retry_times=5, backoff_factor=3):
+    def get_df_schema_with_retry(self, retry_times=5, backoff_factor=30):
         for i in range(retry_times + 1):
             try:
                 df_schema = self.get_df_schema()
@@ -73,7 +74,7 @@ class BaseData(ABC):
         self.before_retrieve_data()
         df_schema = self.get_df_schema_with_retry()
         logger.info("data retrieved.")
-        dt = datetime.now()
+        dt = datetime.now().astimezone(pytz.timezone("Asia/Shanghai"))
         df_schema.insert(0, "gmt_create", dt)
         df_schema.insert(1, "gmt_modified", dt)
         df_schema.insert(len(df_schema.columns), "ds", self.ds)

@@ -2,6 +2,9 @@ from airflow.utils.email import send_email
 from datetime import timedelta
 from airflow.sensors.date_time import DateTimeSensor
 
+def get_remote_ssh_conf():
+    return "cheese", "cheese", "192.168.50.20"
+
 def get_default_args():
     return {'email_on_failure': False, "email": ["bowmore.alert@outlook.com"],
             'on_failure_callback': failure_callback, 'retries': 1, 'retry_delay': timedelta(minutes=1)}

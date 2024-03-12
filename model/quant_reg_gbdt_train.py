@@ -352,7 +352,7 @@ def get_args():
     parser.add_argument('--use_categorical_features', type=int, default=1,
                         help='use_categorical_features, 0 no, 1 yes, default 1')
 
-    parser.add_argument('--label_name', type=str, default="label_roi_3d",
+    parser.add_argument('--label_name', type=str, default="label_roi_5d",
                         help='if used, use_roc_label,use_sqrt_roc,use_log_close will be disabled.')
 
     parser.add_argument('--save_prediction_result', type=int, default=1,

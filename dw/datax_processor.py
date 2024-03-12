@@ -18,7 +18,7 @@ logger = get_logger(__name__)
 
 class DataxProcessor:
 
-    def __init__(self, columns, table, where, data_file_name, datax_path="/home/lotus/sandbox/datax/bin/datax.py"):
+    def __init__(self, columns, table, where, data_file_name):
         self.columns = columns
         self.table = table
         self.where = where
@@ -26,7 +26,8 @@ class DataxProcessor:
         self.conf_file_name = self.get_conf_file_name(data_file_name)
         self.temp_file_prefix = str(uuid.uuid4().hex)
 
-        self.datax_path = datax_path
+        self.datax_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))),"datax/bin/datax.py")
+        logger.info(f"datax path {self.datax_path}")
 
         self.conf_str = self._generate_conf_str(self.columns, self.table, self.where, self.temp_file_prefix)
         self._write_conf_to_file(self.conf_str, self.conf_file_name)

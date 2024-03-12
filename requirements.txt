@@ -23,3 +23,4 @@ nacos-sdk-python
 joblib
 quantstats
 ipython
+optuna
