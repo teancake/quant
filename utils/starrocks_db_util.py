@@ -81,7 +81,7 @@ def get_days_ahead_ds(ds, days):
     return (datetime.strptime(ds, '%Y%m%d') - timedelta(days=days)).strftime("%Y%m%d")
 
 
-def mysql_to_ods_dwd(mysql_table_name, ds, di_df="di", unique_columns=None, days_ahead=15):
+def mysql_to_ods_dwd(mysql_table_name, ds, di_df="di", unique_columns=None, lifecycle=62, days_ahead=15):
     cols, col_names = get_table_columns(mysql_table_name, ignore_ds=True)
     mysql_columns_str = ", ".join(cols)
     mysql_column_names_str = ", ".join(col_names)
@@ -120,7 +120,7 @@ def mysql_to_ods_dwd(mysql_table_name, ds, di_df="di", unique_columns=None, days
             "replication_num" = "1",
             "dynamic_partition.enable" = "true",
             "dynamic_partition.time_unit" = "DAY",
-            "dynamic_partition.start" = "-62",
+            "dynamic_partition.start" = "-{lifecycle}",
             "dynamic_partition.end" = "7",
             "dynamic_partition.prefix" = "p",
             "dynamic_partition.buckets" = "32"
@@ -130,7 +130,7 @@ def mysql_to_ods_dwd(mysql_table_name, ds, di_df="di", unique_columns=None, days
         INSERT OVERWRITE {ods_table_name} PARTITION(p{ds})
         select 
         {mysql_column_names_str},
-        {ds} as ds
+        '{ds}' as ds
         from 
         external_{mysql_table_name}
         where DATE_FORMAT(gmt_create, '%Y%m%d') = {ds}
@@ -141,17 +141,20 @@ def mysql_to_ods_dwd(mysql_table_name, ds, di_df="di", unique_columns=None, days
         CREATE TABLE IF NOT EXISTS {dwd_table_name} LIKE {ods_table_name};
         INSERT OVERWRITE {dwd_table_name} PARTITION(p{ds})'''
 
-    ds_start = ds if di_df == "di" else get_days_ahead_ds(ds, days_ahead)
+    if di_df == "di":
+        where_cond = f"where ds = '{ds}'"
+    else:
+        where_cond = f"where ds >= '{get_days_ahead_ds(ds, days_ahead)}'"
 
     select_str = f'''
         select 
         {mysql_column_names_str},
-        {ds} as ds 
+        '{ds}' as ds 
         from (select *,
         row_number() over (partition by {unique_columns_str} order by gmt_create desc) as rn
         from 
         {ods_table_name} 
-        where ds >= '{ds_start}'
+        {where_cond}
         )a where rn = 1
     '''
 
@@ -159,30 +162,70 @@ def mysql_to_ods_dwd(mysql_table_name, ds, di_df="di", unique_columns=None, days
     db = StarrocksDbUtil()
     db.run_sql(ods_sql_str)
     logger.info("ods sql finished.")
-    db.dqc_row_count(ods_table_name, ds)
     db.run_sql(dwd_sql_str)
     logger.info("dwd sql finished.")
     db.dqc_row_count(dwd_table_name, ds)
+    return dwd_table_name
 
 
+def content_to_rag(content_sql, content_table_name, ds):
+    rag_table_name = "dwd_quant_rag_di"
+    rag_ddl = f"""
+    CREATE TABLE IF NOT EXISTS {rag_table_name} (
+        `gmt_create` datetime NULL COMMENT "",
+        `gmt_modified` datetime NULL COMMENT "", 
+        `source` string NULL COMMENT "",
+        `id` string NULL COMMENT "",
+        `pub_time` STRING NULL COMMENT "", 
+        `content` string NULL COMMENT "", 
+        `ds` date
+        ) 
+        PARTITION BY RANGE(ds)({generate_partition_spec(ds)})
+        DISTRIBUTED BY HASH(ds) BUCKETS 32
+        PROPERTIES(
+            "replication_num" = "1",
+            "dynamic_partition.enable" = "true",
+            "dynamic_partition.time_unit" = "DAY",
+            "dynamic_partition.start" = "-3650",
+            "dynamic_partition.end" = "7",
+            "dynamic_partition.prefix" = "p",
+            "dynamic_partition.buckets" = "32"
+        )
+        ;
+    """
+    db = StarrocksDbUtil()
+    if not db.table_exists(rag_table_name):
+        logger.info(f"rag table {rag_table_name} does not exist, create it.")
+        db.run_sql(rag_ddl)
+
+    logger.info("prepare content")
+    db.run_sql(content_sql)
+    logger.info("prepare content done")
+
+    insert_sql = f"""
+    INSERT INTO {rag_table_name} PARTITION(p{ds})
+    SELECT gmt_create, gmt_modified, source, id, pub_time, content, ds
+    from {content_table_name} where ds = {ds}
+    """
+    logger.info(f"insert content from {content_table_name} into rag table {rag_table_name}")
+    db.run_sql(insert_sql)
+    logger.info("insert done")
 
 
 class StarrocksDbUtil:
+    server_address, port, db_name, user, password = get_starrocks_config()
+    engine = sqlalchemy.create_engine(f"starrocks://{user}:{password}@{server_address}:{port}/{db_name}?charset=utf8", connect_args={'connect_timeout': 600})
+
     def __init__(self):
-        self.engine = None
+        pass
 
     def get_db_engine(self):
-        if self.engine is None:
-            self.engine = self._create_db_engine()
         return self.engine
 
-    def _create_db_engine(self):
-        server_address, port, db_name, user, password = get_starrocks_config()
-        return sqlalchemy.create_engine(f"starrocks://{user}:{password}@{server_address}:{port}/{db_name}?charset=utf8", connect_args={'connect_timeout': 600})
-
-
     def table_exists(self, table_name):
-        return sqlalchemy.inspect(self.get_db_engine()).has_table(table_name)
+        sql = f"SHOW TABLES LIKE '{table_name}'"
+        res = self.run_sql(sql)
+        return len(res) > 0
 
 
     def run_sql(self, sql, log=True, chunksize=None):

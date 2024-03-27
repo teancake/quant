@@ -18,12 +18,13 @@ logger = get_logger(__name__)
 
 
 class BaseData(ABC):
+
+    db = DbUtil()
+    engine = db.get_db_engine()
+
     def __init__(self):
-        self.db = DbUtil()
-        self.engine = self.db.get_db_engine()
         self.table_name = self.get_table_name()
         self.ds = self.generate_default_ds()
-        logger.info("db connection established.")
 
     def ds_exists(self, ds):
         results = self.db.run_sql("SELECT count(*) from {} where ds = {}".format(self.get_table_name(), ds))

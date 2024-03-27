@@ -24,3 +24,6 @@ joblib
 quantstats
 ipython
 optuna
+tushare
+retrying
+statsmodels
