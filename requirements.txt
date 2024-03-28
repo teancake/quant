@@ -4,9 +4,8 @@ mplfinance
 baostock
 sqlalchemy
 pymysql
-cryptography
 backtrader
-pandas~=2.0.2
+pandas~=2.1.4
 starrocks
 myTT
 torch

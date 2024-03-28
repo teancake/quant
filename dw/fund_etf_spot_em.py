@@ -33,7 +33,7 @@ class FundEtfSpotEm(BaseData):
 
     def get_df_schema(self):
         df = ak.fund_etf_spot_em()
-        df_schema = df
+        df_schema = df[["代码", "名称", "最新价", "涨跌额", "涨跌幅", "成交量", "成交额", "开盘价", "最高价", "最低价", "昨收", "换手率", "流通市值", "总市值"]]
         return df_schema
 
     def before_retrieve_data(self):
