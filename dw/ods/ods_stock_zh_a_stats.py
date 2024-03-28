@@ -1,6 +1,6 @@
 import sys, os
 
-parent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.append(parent_dir)
 
 from utils.log_util import get_logger
