@@ -29,7 +29,7 @@ class StockZhIndex(BaseData):
         return "stock_zh_index"
 
     def get_df_schema(self):
-        df = ak.stock_zh_index_spot()
+        df = ak.stock_zh_index_spot_sina()
         df_schema = df[["代码", "名称"]]
         return df_schema
 
