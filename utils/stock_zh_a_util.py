@@ -9,16 +9,43 @@ from utils.log_util import get_logger
 
 logger = get_logger(__name__)
 
-def get_benchmark_data(symbol, ds, start_date):
+def get_benchmark_data(symbol, ds, start_date, yf_compatible=False):
     results = StarrocksDbUtil().run_sql(f"SELECT * FROM dwd_index_zh_a_hist_df WHERE ds='{ds}' and 代码='{symbol}' and 日期 >= '{start_date}'")
     df = pd.DataFrame(results)
     if not df.empty:
         df.set_index("日期", inplace=True)
         df.index = pd.to_datetime(df.index)
+        df = df.sort_index()
+    if yf_compatible:
+        df = df.rename(columns={"开盘": "open", "收盘": "close", "最高": "high", "最低": "low",
+                                "成交量": "volume", "成交额": "amount"})
+        df.index.name = "date"
+        df = df[["open", "close", "high", "low", "volume", "amount"]]
     return df
 
 
-def get_stock_data(symbol, ds, start_date):
+def get_fund_etf_data(symbol, ds, start_date, yf_compatible=False):
+    table_name = "dwd_fund_etf_hist_em_df"
+    symbol_field = "symbol"
+    if symbol == "all":
+        results = StarrocksDbUtil().run_sql(f"SELECT * FROM {table_name} WHERE ds='{ds}' and 日期 >= '{start_date}'")
+    else:
+        results = StarrocksDbUtil().run_sql(f"SELECT * FROM {table_name} WHERE ds='{ds}' and {symbol_field}='{symbol}' and 日期 >= '{start_date}'")
+    df = pd.DataFrame(results)
+    if not df.empty:
+        df.set_index("日期", inplace=True)
+        df.index = pd.to_datetime(df.index)
+        df = df.sort_index()
+        df["代码"] = df[symbol_field]
+    if yf_compatible:
+        df = df.rename(columns={"开盘": "open", "收盘": "close", "最高": "high", "最低": "low",
+                                "成交量": "volume", "成交额": "amount"})
+        df.index.name = "date"
+        df = df[["open", "close", "high", "low", "volume", "amount"]]
+    return df
+
+
+def get_stock_data(symbol, ds, start_date, yf_compatible=False):
     if symbol == "all":
         results = StarrocksDbUtil().run_sql(f"SELECT * FROM dwd_stock_zh_a_hist_df WHERE ds='{ds}' and 日期 >= '{start_date}'")
     else:
@@ -27,6 +54,12 @@ def get_stock_data(symbol, ds, start_date):
     if not df.empty:
         df.set_index("日期", inplace=True)
         df.index = pd.to_datetime(df.index)
+        df = df.sort_index()
+    if yf_compatible:
+        df = df.rename(columns={"开盘": "open", "收盘": "close", "最高": "high", "最低": "low",
+                                "成交量": "volume", "成交额": "amount", "代码": "symbol"})
+        df.index.name = "date"
+        df = df[["open", "close", "high", "low", "volume", "amount", "symbol"]]
     return df
 
 

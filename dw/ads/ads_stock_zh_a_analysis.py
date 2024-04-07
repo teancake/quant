@@ -70,7 +70,7 @@ def run_task(ds):
     FROM temp_stock_zh_a_analysis_b a
     JOIN 
         (SELECT 代码,
-             close-ma_20 AS ma20_diff,
+             (close-ma_20)/ma_20 AS ma20_diff,
              close,
              ma_20
         FROM ads_stock_zh_a_pred_data

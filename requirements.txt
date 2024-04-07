@@ -12,9 +12,7 @@ torch
 scikit-learn
 xgboost
 transformers
-lightgbm
-gluonts[torch]
-accelerate
+lightgbm==4.1.0
 evaluate
 ta_cn[cn]
 fire
@@ -22,7 +20,9 @@ nacos-sdk-python
 joblib
 quantstats
 ipython
-optuna
+optuna==3.4.0
 tushare
 retrying
 statsmodels
+backtrader
+PyPortfolioOpt
