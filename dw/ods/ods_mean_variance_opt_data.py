@@ -19,5 +19,6 @@ if __name__ == '__main__':
         logger.info(f"{ds} is not trade date. task exits.")
         exit(os.EX_OK)
 
-    mysql_table_name = "ff3_factor_data"
-    dwd_table_name = mysql_to_ods_dwd(mysql_table_name, ds, di_df="df", unique_columns=["date", "period", "model"])
+    mysql_table_name = "mean_variance_opt_data"
+    dwd_table_name = mysql_to_ods_dwd(mysql_table_name, ds, di_df="df",
+                                      unique_columns=["return_model", "risk_model", "optimizer", "objective", "run_id"])

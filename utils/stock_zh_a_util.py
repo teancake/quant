@@ -9,6 +9,14 @@ from utils.log_util import get_logger
 
 logger = get_logger(__name__)
 
+
+def get_stock_position():
+    results = StarrocksDbUtil().run_sql(f"""select 代码 from ads_stock_zh_a_position where position > 0""")
+    results = [item[0] for item in results]
+    stock_list = set(get_stock_list()) & set(results)
+    return stock_list
+
+
 def get_list_date():
     sql = f"select distinct 代码 as ticker, 上市时间 as list_date from dwd_stock_individual_info_em_df where ds in (select max(ds) from dwd_stock_individual_info_em_df) and length(上市时间)=8;"
     results = StarrocksDbUtil().run_sql(sql)
