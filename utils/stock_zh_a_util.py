@@ -9,6 +9,15 @@ from utils.log_util import get_logger
 
 logger = get_logger(__name__)
 
+def get_list_date():
+    sql = f"select distinct 代码 as ticker, 上市时间 as list_date from dwd_stock_individual_info_em_df where ds in (select max(ds) from dwd_stock_individual_info_em_df) and length(上市时间)=8;"
+    results = StarrocksDbUtil().run_sql(sql)
+    df = pd.DataFrame(results)
+    df.list_date = pd.to_datetime(df.list_date, format='%Y%m%d')
+    df.set_index("ticker", inplace=True)
+    return df
+
+
 def get_benchmark_data(symbol, ds, start_date, yf_compatible=False):
     results = StarrocksDbUtil().run_sql(f"SELECT * FROM dwd_index_zh_a_hist_df WHERE ds='{ds}' and 代码='{symbol}' and 日期 >= '{start_date}'")
     df = pd.DataFrame(results)
