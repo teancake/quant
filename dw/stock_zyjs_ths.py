@@ -22,24 +22,22 @@ logger = get_logger(__name__)
 限量: 单次返回所有数据
 '''
 
-
-class SymbolBaseData(BaseData):
-    def __init__(self, symbol=None, ds=None):
+class StockZyjsThs(BaseData):
+    def __init__(self, ds, symbol):
         super().__init__()
-        self.symbol = symbol
         self.ds = ds
-
-    def table_exists(self):
-        sql = f"SHOW TABLES LIKE '{self.table_name}'"
-        res = self.db.run_sql(sql)
-        return len(res) > 0
-
-
-
-class StockZyjsThs(SymbolBaseData):
-    def __init__(self, symbol=None, ds=None):
-        super().__init__(symbol, ds)
+        self.symbol = symbol
         self.symbol_column_name = "股票代码"
+
+    def set_params(self, **kwargs):
+        self.params = kwargs
+
+    def get_downloaded_symbols(self):
+        if not self.table_exists():
+            return []
+        sql = f"SELECT distinct {self.symbol_column_name} from {self.table_name}  where ds = '{self.ds}'"
+        recs = self.db.run_sql(sql)
+        return [rec[0] for rec in recs]
 
     def before_retrieve_data(self):
         pass
@@ -51,38 +49,33 @@ class StockZyjsThs(SymbolBaseData):
         df = ak.stock_zyjs_ths(symbol=self.symbol)
         return df
 
-    def get_downloaded_symbols(self):
-        if not self.table_exists():
-            return []
-        sql = f"SELECT distinct {self.symbol_column_name} from {self.table_name}  where ds = '{self.ds}'"
-        recs = self.db.run_sql(sql)
-        return [rec[0] for rec in recs]
+
+class DataHelper:
+
+    def rate_limiter_sleep(self, timer_start, loops_per_second=1.0):
+        loop_time_second = 1.0 / loops_per_second
+        dt = time.time() - timer_start
+        if dt < loop_time_second:
+            logger.info(f"dt is {dt}, sleep {loop_time_second - dt} seconds")
+            time.sleep(loop_time_second - dt)
 
 
-def rate_limiter_sleep(timer_start, loops_per_second=1.0):
-    loop_time_second = 1.0 / loops_per_second
-    dt = time.time() - timer_start
-    if dt < loop_time_second:
-        logger.info(f"dt is {dt}, sleep {loop_time_second - dt} seconds")
-        time.sleep(loop_time_second - dt)
-
-
-def get_data_for_all_symbols(ds: str):
-    symbol_list = get_stock_list()
-    downloaded_symbols = StockZyjsThs("", ds).get_downloaded_symbols()
-    for symbol in symbol_list:
-        timer_start = time.time()
-        try:
-            logger.info(f"retrieving symbol {symbol} on ds {ds}.")
-            if symbol in downloaded_symbols:
-                logger.info(f"symbol {symbol} already downloaded. skip downloading.")
-                continue
-            data = StockZyjsThs(symbol, ds)
-            data.retrieve_data()
-            logger.info("symbol {} done".format(symbol))
-        except Exception as e:
-            logger.warning(f"exception occurred {e}")
-        rate_limiter_sleep(timer_start, loops_per_second=1)
+    def get_data_for_all_symbols(self, ds: str):
+        symbol_list = get_stock_list()
+        downloaded_symbols = StockZyjsThs(ds=ds, symbol="").get_downloaded_symbols()
+        for symbol in symbol_list:
+            timer_start = time.time()
+            try:
+                logger.info(f"retrieving symbol {symbol} on ds {ds}.")
+                if symbol in downloaded_symbols:
+                    logger.info(f"symbol {symbol} already downloaded. skip downloading.")
+                    continue
+                data = StockZyjsThs(ds=ds, symbol=symbol)
+                data.retrieve_data()
+                logger.info("symbol {} done".format(symbol))
+            except Exception as e:
+                logger.warning(f"exception occurred {e}")
+            self.rate_limiter_sleep(timer_start, loops_per_second=1)
 
 
 if __name__ == '__main__':
@@ -91,6 +84,6 @@ if __name__ == '__main__':
     backfill = is_backfill(ds)
     if backfill:
         logger.info("backfill, get data for all symbols")
-        get_data_for_all_symbols(ds)
+        DataHelper().get_data_for_all_symbols(ds)
     else:
         logger.info("not backfill, no data will be downloaded")

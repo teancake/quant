@@ -23,3 +23,6 @@ if __name__ == '__main__':
 
     mysql_table_name = "tushare_fina_indicator"
     mysql_to_ods_dwd(mysql_table_name, ds, di_df="df", unique_columns=["ts_code", "end_date"], lifecycle=31, days_ahead=180)
+
+    mysql_table_name = "tushare_stk_factor"
+    mysql_to_ods_dwd(mysql_table_name, ds, di_df="df", unique_columns=["ts_code", "trade_date"], lifecycle=31, days_ahead=15)

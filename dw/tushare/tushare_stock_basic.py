@@ -26,12 +26,16 @@ if __name__ == '__main__':
     fetcher.fetch_meta_data()
     fetcher.fetch_trade_day()
     fetcher.fetch_month_map()
+    # 日数据
     fetcher.ensure_data(fetcher.daily, "__temp_daily__", table_name="tushare_daily")  # 日行情表
     fetcher.ensure_data(fetcher.suspend_d, "__temp_suspend_d__", table_name="tushare_suspend_d")  # 停牌表
     fetcher.ensure_data(fetcher.limit_list, "__temp_limit_list__", table_name="tushare_limit_list")  # 涨跌停表
     fetcher.ensure_data(fetcher.adj_factor, "__temp_adj_factor__", table_name="tushare_adj_factor")  # 复权因子表
     fetcher.ensure_data(fetcher.daily_basic, "__temp_daily_basic__", table_name="tushare_daily_basic")  # 每日指标表
     fetcher.ensure_data(fetcher.moneyflow, "__temp_moneyflow__", table_name="tushare_moneyflow")  # 资金流表
+    fetcher.ensure_data(fetcher.stk_factor, "__temp_stk_factor__", table_name="tushare_stk_factor")  # 每日技术面因子
+
+    # 季度数据
     fetcher.ensure_data_by_q(fetcher.fina_indicator, "__temp_fina_indicator__", table_name="tushare_fina_indicator")  # 财务指标表
     fetcher.ensure_data_by_q(fetcher.income, "__temp_income__", table_name="tushare_income")  # 利润表
     fetcher.ensure_data_by_q(fetcher.balancesheet, "__temp_balancesheet__", table_name="tushare_balancesheet")  # 资产负债表

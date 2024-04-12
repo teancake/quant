@@ -19,6 +19,7 @@ import statsmodels.api as sm
 
 
 # adapted from https://github.com/Young-Mann/Fama-5-Factors/blob/main/FAMA.ipynb
+# https://github.com/songzh96/Fama-French-choose-stock/blob/master/Fama.py
 
 class BaseFactorModel:
 
@@ -162,7 +163,7 @@ class FamaFrenchThree(BaseFactorModel):
         data = self.get_basic_data()
         ret = self.get_return()
         df = pd.merge(data, ret,  left_index=True, right_index=True)
-        df.rename(columns={"pct_chg": "RETURN", "circ_mv": "MKT", "bm": "BM"}, inplace=True)
+        df.rename(columns={"pct_chg": "RETURN", "total_mv": "MKT", "bm": "BM"}, inplace=True)
         logger.info(f"after merge, df columns {df.columns}, value {df}")
         # 缩尾，剔除极值
         df["RETURN"] = self.winsorize(df["RETURN"])

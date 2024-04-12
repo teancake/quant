@@ -149,7 +149,7 @@ PROPERTIES(
     "replication_num" = "1",
     "dynamic_partition.enable" = "true",
     "dynamic_partition.time_unit" = "DAY",
-    "dynamic_partition.start" = "-10",
+    "dynamic_partition.start" = "-30",
     "dynamic_partition.end" = "7",
     "dynamic_partition.prefix" = "p",
     "dynamic_partition.buckets" = "32"

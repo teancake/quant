@@ -38,7 +38,7 @@ class StockZhAHist(BaseData):
         if isinstance(period_list, list) and all(item in ["daily", "weekly", "monthly"] for item in period_list):
             self.period_list = period_list
         else:
-            logger.warn("somme elements in period_list {} not recognized, should be daily, weekly, or monthly. Use daily as default.".format(period_list))
+            logger.warn("some elements in period_list {} not recognized, should be daily, weekly, or monthly. Use daily as default.".format(period_list))
             self.period_list = ["daily"]
         super().__init__()
 
@@ -55,11 +55,11 @@ class StockZhAHist(BaseData):
         # period_list = ["daily", "weekly", "monthly"]
         period_list = self.period_list
         # qfq: 返回前复权后的数据; hfq: 返回后复权后的数据
-        adjust_list = ["hfq"]
+        adjust_list = ["hfq", "qfq"]
         df_list = []
         for period in period_list:
             for adjust in adjust_list:
-                logger.info(f"retrieving symbol {symbol} on ds {self.ds} for period {period}, adjust {adjust}.")
+                logger.info(f"retrieving symbol {self.symbol} on ds {self.ds} for period {period}, adjust {adjust}.")
                 df = self.get_single_df(self.symbol, period, adjust, self.ds, self.backfill)
                 df_list.append(df)
             time.sleep(1)
@@ -80,12 +80,29 @@ class StockZhAHist(BaseData):
         df.insert(2, "adjust", adjust)
         return df
 
-
     def get_downloaded_symbols(self):
         sql = f"SELECT distinct symbol from {self.get_table_name()}  where ds = '{self.ds}'"
         recs = self.db.run_sql(sql)
         return [rec[0] for rec in recs]
 
+
+class DataHelper:
+
+    def get_all_symbols(self):
+        data = StockZhAHist(backfill=backfill, period_list=period_list)
+        data.set_ds(ds)
+        symbol_list = stock_zh_a_util.get_stock_list()
+        downloaded_symbols = data.get_downloaded_symbols()
+        for symbol in symbol_list:
+            logger.info("process symbol {}".format(symbol))
+            if symbol in downloaded_symbols:
+                logger.info(f"symbol {symbol} already downloaded. skip downloading.")
+                continue
+            data.set_symbol(symbol)
+            data.retrieve_data()
+            logger.info("symbol {} done".format(symbol))
+
+        data.clean_up_history(lifecycle=30)
 
 if __name__ == '__main__':
     ds = sys.argv[1]
@@ -97,18 +114,8 @@ if __name__ == '__main__':
     period_list = ["daily"] if len(sys.argv) <= 2 else [sys.argv[2]]
     backfill = is_backfill(ds)
     logger.info("ds {}, execute {} task, backfill {}".format(ds, period_list, backfill))
-    data = StockZhAHist(backfill=backfill, period_list=period_list)
-    data.set_ds(ds)
-    symbol_list = stock_zh_a_util.get_stock_list()
-    downloaded_symbols = data.get_downloaded_symbols()
-    for symbol in symbol_list:
-        logger.info("process symbol {}".format(symbol))
-        if symbol in downloaded_symbols:
-            logger.info(f"symbol {symbol} already downloaded. skip downloading.")
-            continue
-        data.set_symbol(symbol)
-        data.retrieve_data()
-        logger.info("symbol {} done".format(symbol))
+
+    DataHelper().get_all_symbols()
 
     # if backfill:
     #     delete_ds = (datetime.strptime(ds, '%Y%m%d') - timedelta(days=14)).strftime("%Y%m%d")
@@ -117,4 +124,4 @@ if __name__ == '__main__':
     #     data.delete_records(conditions=cond)
     #     logger.info("clearing historical data done.")
 
-    data.clean_up_history(lifecycle=30)
+

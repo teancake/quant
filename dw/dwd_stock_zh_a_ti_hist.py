@@ -21,11 +21,11 @@ if __name__ == '__main__':
 
 
     db = StarrocksDbUtil()
-    dwd_sql_str = '''
+    dwd_sql_str = f'''
 CREATE TABLE if not exists dwd_stock_zh_a_ti_hist_df LIKE ods_stock_zh_a_ti_hist;
-INSERT OVERWRITE dwd_stock_zh_a_ti_hist_df PARTITION(p{})
+INSERT OVERWRITE dwd_stock_zh_a_ti_hist_df PARTITION(p{ds})
 select 
-'{}' as `ds`,
+'{ds}' as `ds`,
 `gmt_create` ,
 `gmt_modified` ,
 `日期`,
@@ -106,10 +106,10 @@ select
 from (
   select *, row_number()over (partition by 日期, 代码 order by gmt_create desc) as rn
   from ods_stock_zh_a_ti_hist
-  where ds >= '{}'
+  where ds >= '{get_days_ahead_ds(ds, 15)}'
 ) a
 where rn = 1;
-    '''.format(ds, ds, get_days_ahead_ds(ds, 7))
+    '''
 
     db.run_sql(dwd_sql_str)
     logger.info("dwd sql finished.")

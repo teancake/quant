@@ -4,7 +4,7 @@ parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__
 sys.path.append(parent_dir)
 
 from utils.log_util import get_logger
-from utils.starrocks_db_util import mysql_to_ods_dwd, content_to_rag
+from utils.starrocks_db_util import mysql_to_ods_dwd
 from utils.stock_zh_a_util import is_trade_date
 
 import sys

@@ -5,6 +5,7 @@ import MyTT as tt
 
 
 def get_ta_indicator_map(data_df: pd.DataFrame):
+    data_df.sort_values(by="日期", ascending=True, inplace=True)
     open_ = data_df['开盘'].fillna(0).to_numpy()
     close = data_df['收盘'].fillna(0).to_numpy()
     high = data_df['最高'].fillna(0).to_numpy()
@@ -81,5 +82,5 @@ def get_ta_indicator_map(data_df: pd.DataFrame):
     ti_map["dc_upper"], ti_map["dc_mid"], ti_map["dc_lower"], = tt.TAQ(high, low, N=20)
 
     ti_df = pd.DataFrame(ti_map)
-    ti_df["日期"] = data_df["日期"]
+    ti_df.insert(0, "日期", data_df["日期"])
     return ti_df

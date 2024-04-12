@@ -62,11 +62,11 @@ def get_fund_etf_data(symbol, ds, start_date, yf_compatible=False):
     return df
 
 
-def get_stock_data(symbol, ds, start_date, yf_compatible=False):
+def get_stock_data(symbol, ds, start_date, adjust="hfq", period="daily", yf_compatible=False):
     if symbol == "all":
-        results = StarrocksDbUtil().run_sql(f"SELECT * FROM dwd_stock_zh_a_hist_df WHERE ds='{ds}' and 日期 >= '{start_date}'")
+        results = StarrocksDbUtil().run_sql(f"SELECT * FROM dwd_stock_zh_a_hist_df WHERE ds='{ds}' and adjust='{adjust}' and period='{period}' and 日期 >= '{start_date}'")
     else:
-        results = StarrocksDbUtil().run_sql(f"SELECT * FROM dwd_stock_zh_a_hist_df WHERE ds='{ds}' and 代码='{symbol}' and 日期 >= '{start_date}'")
+        results = StarrocksDbUtil().run_sql(f"SELECT * FROM dwd_stock_zh_a_hist_df WHERE ds='{ds}' and adjust='{adjust}' and period='{period}' and 代码='{symbol}' and 日期 >= '{start_date}'")
     df = pd.DataFrame(results)
     if not df.empty:
         df.set_index("日期", inplace=True)

@@ -36,10 +36,12 @@ def get_table_columns(table_name, ignore_ds):
 #     WITH GRANT OPTION;
 # FLUSH PRIVILEGES;
 class DbUtil:
-    server_address, port, db_name, user, password = get_mysql_config()
-    engine = sqlalchemy.create_engine(f"mysql+pymysql://{user}:{password}@{server_address}:{port}/{db_name}?charset=utf8")
+
 
     def __init__(self):
+        server_address, port, db_name, user, password = get_mysql_config()
+        self.engine = sqlalchemy.create_engine(
+            f"mysql+pymysql://{user}:{password}@{server_address}:{port}/{db_name}?charset=utf8")
         pass
 
     def get_db_engine(self):
