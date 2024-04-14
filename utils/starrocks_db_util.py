@@ -161,7 +161,8 @@ def mysql_to_ods_dwd(mysql_table_name, ds, di_df="di", unique_columns=None, life
     dwd_sql_str += select_str
     db = StarrocksDbUtil()
     db.run_sql(ods_sql_str)
-    logger.info("ods sql finished.")
+    ods_row_count = db.run_sql(f"select count(*) from {ods_table_name} where ds ='{ds}'")[0][0]
+    logger.info(f"ods sql finished. row count {ods_row_count}.")
     db.run_sql(dwd_sql_str)
     logger.info("dwd sql finished.")
     db.dqc_row_count(dwd_table_name, ds)

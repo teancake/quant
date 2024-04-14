@@ -9,6 +9,9 @@ from utils.log_util import get_logger
 
 logger = get_logger(__name__)
 
+def get_sw_industries():
+    results = StarrocksDbUtil().run_sql(f"select 行业名称 from dwd_sw_index_first_info_df where ds in (select max(ds) from dwd_sw_index_first_info_df)")
+    return [item[0] for item in results]
 
 def get_stock_position():
     results = StarrocksDbUtil().run_sql(f"""select 代码 from ads_stock_zh_a_position where position > 0""")
