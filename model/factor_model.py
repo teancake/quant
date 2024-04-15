@@ -61,8 +61,7 @@ class BaseFactorModel:
         return df
 
     def get_rf(self):
-        # 应该用3个月
-        sql = f"select * from dwd_rate_interbank_df where ds= '{self.ds}' and symbol='Shibor人民币' and indicator='1周'"
+        sql = f"select * from dwd_rate_interbank_df where ds= '{self.ds}' and symbol='Shibor人民币' and indicator='3月'"
         results = StarrocksDbUtil().run_sql(sql)
         df = pd.DataFrame(results)
         df.set_index("日期", inplace=True)
@@ -72,6 +71,11 @@ class BaseFactorModel:
 
         # r_f = df_shibor.resample('M', on='trade_date').last()
         df["rf"] = df["利率"] / 100
+        if self.period == "daily":
+            # rf = (1 + rf)^(1.0 / 252) - 1.0
+            df["rf"] = df["rf"] / 252
+        elif self.period == "monthly":
+            df["rf"] = df["rf"] / 12
         return df[["rf"]]
 
 
@@ -146,6 +150,10 @@ class CapmModel(BaseFactorModel):
 class FamaFrenchThree(BaseFactorModel):
     def __init__(self, ds, start_date):
         super().__init__(ds, start_date)
+        self.df, self.rf = None, None
+        self.ff3_factors = None
+        self.alpha = None
+        self.betas = None
 
     # 因子分组
     def add_group_columns(self, df, val_col, group_col, group_cnt):
@@ -171,6 +179,7 @@ class FamaFrenchThree(BaseFactorModel):
         df = self.delete_new_listed(df)
         df = self.handle_nan(df)
         rf = self.get_rf()
+        self.df, self.rf = df, rf
         return df, rf
 
     def handle_nan(self, df):
@@ -205,24 +214,55 @@ class FamaFrenchThree(BaseFactorModel):
         s = np.where(s < low, low, s)
         return s
 
-    def get_model(self,df, rf):
-        df_factor = self.get_ff3_factors(df)
+
+
+    def get_alpha_beta(self, days_ahead=120):
+        logger.info("get alpha and beta from ols")
+        if self.ff3_factors is None:
+            self.get_ff3_factors()
+        factors = self.ff3_factors
+        df, rf = self.df, self.rf
+        ols_start_date = datetime.strptime(self.ds,"%Y%m%d") - timedelta(days=days_ahead)
 
         import statsmodels.api as sm
-        temp_df = pd.merge(pd.DataFrame(df.groupby("date")["RETURN"].mean()), rf["rf"], left_index=True, right_index=True)
+        temp_df = pd.merge(df[df.index.get_level_values(level="date") > ols_start_date]["RETURN"], rf["rf"], left_index=True, right_index=True)
         lhs = pd.DataFrame(temp_df["RETURN"] - temp_df["rf"], columns=["lhs"])
-        X = pd.merge(df_factor, lhs, left_index=True, right_index=True)
+        X = pd.merge(factors, lhs, left_index=True, right_index=True)
         X.dropna(inplace=True)
-        logger.info(f"ols data {X}")
-        y = X.pop("lhs")
-        X = sm.add_constant(X)
-        logger.info(f"before OLS, X {X}, y {y}")
-        result = sm.OLS(y, X).fit()
-        logger.info(result.summary())
-        return result
+
+        ticker_result_dfs = []
+        for ticker in X.index.get_level_values(level="ticker").unique():
+            logger.info(f"ols regression for ticker {ticker}")
+            ticker_X = X[X.index.get_level_values(level="ticker") == ticker][["lhs", "MARKET", "SMB", "HML"]]
+            ticker_y = ticker_X.pop("lhs")
+            ticker_X = sm.add_constant(ticker_X)
+            ticker_result = sm.OLS(ticker_y, ticker_X).fit()
+            ticker_result_df = pd.DataFrame(
+                {
+                    "alpha": ticker_result.params.get("const",0),
+                    "params": ticker_result.params.to_json(),
+                    "tvalues": ticker_result.tvalues.to_json(),
+                    "pvalues": ticker_result.pvalues.to_json(),
+                    "fvalue": ticker_result.fvalue,
+                    "f_pvalue": ticker_result.f_pvalue,
+                    "rsquared": ticker_result.rsquared,
+                    "rsquared_adj": ticker_result.rsquared_adj,
+                    "aid": ticker_result.aic,
+                    "bic": ticker_result.bic
+                }, index=[ticker]
+            )
+            ticker_result_df.index.name = "ticker"
+            ticker_result_dfs.append(ticker_result_df)
+
+        result_df = pd.concat(ticker_result_dfs)
+        result_df.reset_index()
+        return result_df
 
 
-    def get_ff3_factors(self, df):
+    def get_ff3_factors(self):
+        if self.df is None or self.rf is None:
+            self.get_df_rf()
+        df = self.df
         size, size_group_col, size_group_cnt = "MKT", "MKT_G", 2
         value, value_group_col, value_group_cnt = "BM", "BM_G", 3
         df = self.add_group_columns(df, val_col=size, group_col=size_group_col, group_cnt=size_group_cnt)
@@ -256,7 +296,10 @@ class FamaFrenchThree(BaseFactorModel):
         benchmark = self.get_benchmark()
         benchmark = benchmark[["pct_chg"]].rename(columns={"pct_chg": "MARKET"})
         factor_ret = pd.merge(benchmark, factor_ret, how="inner", on="date")
+        factor_ret = factor_ret.rename(columns={"MKT_G1/BM_G1": "SL", "MKT_G1/BM_G2": "SM", "MKT_G1/BM_G3": "SH",
+                                          "MKT_G2/BM_G1": "BL", "MKT_G2/BM_G2": "BM", "MKT_G2/BM_G3": "BH"})
         logger.info(f"FF3 factor computation done, factor columns {factor_ret.columns}, value {factor_ret}")
+        self.ff3_factors = factor_ret
         return factor_ret
 
 

@@ -21,11 +21,13 @@ def run_task(ds):
              b.简称,
              a.sharpe,
              a.beta,
+             a.alpha,
              b.行业,
              c.pe,
              pe_ttm,
              pb,
-             total_mv
+             total_mv,
+             d.alpha as ff3_alpha
     FROM 
     (SELECT *
         FROM dwd_stock_zh_a_stats_df
@@ -44,7 +46,11 @@ def run_task(ds):
         WHERE ds = "{ds}"
         AND trade_date=ds
         )c
-        ON a.symbol=c.symbol ; 
+        ON a.symbol=c.symbol
+    JOIN (SELECT * FROM dwd_ff3_alpha_beta_df 
+        WHERE ds = "{ds}"
+        )d 
+        ON a.symbol = d.ticker; 
 
     ##-- 
     DROP TABLE IF EXISTS temp_stock_zh_a_analysis_b; 
@@ -54,7 +60,12 @@ def run_task(ds):
     FROM 
         (SELECT *,
             avg(pb) OVER (partition by 行业) AS pb_industry, 
-            rank()  OVER (partition by 行业 ORDER BY  pb asc) AS pb_rank_industry
+            rank()  OVER (partition by 行业 ORDER BY  pb asc) AS pb_rank_industry,
+            avg(pe) OVER (partition by 行业) AS pe_industry, 
+            rank()  OVER (partition by 行业 ORDER BY  pe asc) AS pe_rank_industry,
+            avg(total_mv) OVER (partition by 行业) AS total_mv_industry, 
+            rank()  OVER (partition by 行业 ORDER BY total_mv asc) AS total_mv_rank_industry,
+            count(*) over (partition by 行业) as cnt_industry 
         FROM temp_stock_zh_a_analysis_a
         )a ; 
 

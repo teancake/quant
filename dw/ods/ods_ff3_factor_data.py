@@ -21,3 +21,7 @@ if __name__ == '__main__':
 
     mysql_table_name = "ff3_factor_data"
     dwd_table_name = mysql_to_ods_dwd(mysql_table_name, ds, di_df="df", unique_columns=["date", "period", "model"])
+
+    mysql_table_name = "ff3_alpha_beta"
+    dwd_table_name = mysql_to_ods_dwd(mysql_table_name, ds, di_df="df", unique_columns=["ticker", "period", "model", "window"])
+
