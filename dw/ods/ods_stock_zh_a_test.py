@@ -18,11 +18,10 @@ if __name__ == '__main__':
         logger.info(f"{ds} is not trade date. task exits.")
         exit(os.EX_OK)
 
-    mysql_table_name = "tushare_daily_basic"
-    mysql_to_ods_dwd(mysql_table_name, ds, di_df="df", unique_columns=["ts_code", "trade_date"], lifecycle=31)
+    mysql_table_name = "stock_zh_a_test"
+    mysql_to_ods_dwd(mysql_table_name, ds, di_df="df", unique_columns=["variable", "ticker"])
 
-    mysql_table_name = "tushare_fina_indicator"
-    mysql_to_ods_dwd(mysql_table_name, ds, di_df="df", unique_columns=["ts_code", "end_date"], lifecycle=31, days_ahead=180, ods_dqc=False)
 
-    mysql_table_name = "tushare_stk_factor"
-    mysql_to_ods_dwd(mysql_table_name, ds, di_df="df", unique_columns=["ts_code", "trade_date"], lifecycle=31, days_ahead=15)
+
+
+

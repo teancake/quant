@@ -16,14 +16,13 @@ def mysql_datatypes_to_starrocks(mysql_type):
         return mysql_type
 
 
-def get_table_columns(table_name, ignore_ds):
+def get_table_columns(table_name):
     res = DbUtil().run_sql(f"show columns from {table_name}")
-    if ignore_ds:
-        res = [item for item in res if item[0] != "ds"]
-    cols = [f"{item[0]} {mysql_datatypes_to_starrocks(item[1])}" for item in res]
-    col_names = [item[0] for item in res]
-    return cols, col_names
-
+    cols = dict()
+    for item in res:
+        col_name, col_type = item[0], mysql_datatypes_to_starrocks(item[1])
+        cols[col_name] = col_type
+    return cols
 
 
 # db

@@ -53,7 +53,7 @@ if __name__ == '__main__':
         exit(os.EX_OK)
 
     mysql_table_name = "stock_zyjs_ths"
-    dwd_table_name = mysql_to_ods_dwd(mysql_table_name, ds, di_df="df", unique_columns=["股票代码"])
+    dwd_table_name = mysql_to_ods_dwd(mysql_table_name, ds, di_df="df", unique_columns=["股票代码"], ods_dqc=False)
     sql, table_name = content_sql(dwd_table_name, ds)
     content_to_rag(sql, table_name, ds)
 

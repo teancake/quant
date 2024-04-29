@@ -80,20 +80,38 @@ def generate_partition_spec(ds:str):
 def get_days_ahead_ds(ds, days):
     return (datetime.strptime(ds, '%Y%m%d') - timedelta(days=days)).strftime("%Y%m%d")
 
+def _get_cols_str(cols, rename_cols):
+    if rename_cols is None:
+        rename_cols = {}
+    mysql_columns_str = ", ".join([f"{key} {value}" for key, value in cols.items()])
+    mysql_column_names_str = ", ".join(cols.keys())
+    dw_columns_str = ", ".join([f"{rename_cols.get(key, key)} {value}" for key, value in cols.items() if key != "ds"])
+    dw_column_names_str = ", ".join([rename_cols.get(key, key) for key in cols.keys() if key != "ds"])
+    rename_column_names_str = ", ".join([f"{key} AS {rename_cols.get(key)}" if key in rename_cols.keys() else key for key in cols.keys() if key != "ds"])
+    return mysql_columns_str, mysql_column_names_str, dw_columns_str, dw_column_names_str, rename_column_names_str
 
-def mysql_to_ods_dwd(mysql_table_name, ds, di_df="di", unique_columns=None, lifecycle=62, days_ahead=15):
-    cols, col_names = get_table_columns(mysql_table_name, ignore_ds=True)
-    mysql_columns_str = ", ".join(cols)
-    mysql_column_names_str = ", ".join(col_names)
+
+def mysql_to_ods_dwd(mysql_table_name, ds, di_df="di", unique_columns=None, lifecycle=62, days_ahead=15,
+                     rename_columns=None, use_mysql_table_ds=True, mysql_whole_table=False, ods_dqc=True):
+    cols = get_table_columns(mysql_table_name)
+    mysql_columns_str, _, dw_columns_str, dw_column_names_str, rename_column_names_str = _get_cols_str(cols, rename_columns)
     ods_table_name = f"ods_{mysql_table_name}"
     dwd_table_name = f"dwd_{mysql_table_name}_{di_df}"
 
     if unique_columns is not None and len(unique_columns) > 0:
         unique_columns_str = ",".join(unique_columns)
     else:
-        unique_columns_str = mysql_column_names_str
+        unique_columns_str = dw_column_names_str
 
     server_address, port, db_name, user, password = get_mysql_config()
+
+    if use_mysql_table_ds:
+        mysql_where_cond = f"WHERE ds = {ds}"
+    else:
+        mysql_where_cond = f"WHERE DATE_FORMAT(gmt_create, '%Y%m%d') = {ds}"
+
+    if mysql_whole_table:
+        mysql_where_cond = ""
 
     ods_sql_str = f'''
         CREATE TABLE IF NOT EXISTS `external_{mysql_table_name}` ( 
@@ -111,7 +129,7 @@ def mysql_to_ods_dwd(mysql_table_name, ds, di_df="di", unique_columns=None, life
         );
 
         CREATE TABLE IF NOT EXISTS {ods_table_name} (
-        {mysql_columns_str},
+        {dw_columns_str},
         ds date
         ) 
         PARTITION BY RANGE(ds)({generate_partition_spec(ds)})
@@ -128,12 +146,12 @@ def mysql_to_ods_dwd(mysql_table_name, ds, di_df="di", unique_columns=None, life
         ;
 
         INSERT OVERWRITE {ods_table_name} PARTITION(p{ds})
-        select 
-        {mysql_column_names_str},
-        '{ds}' as ds
-        from 
+        SELECT 
+        {rename_column_names_str},
+        {ds} AS ds
+        FROM 
         external_{mysql_table_name}
-        where DATE_FORMAT(gmt_create, '%Y%m%d') = {ds}
+        {mysql_where_cond}
         ;
         '''
 
@@ -147,22 +165,27 @@ def mysql_to_ods_dwd(mysql_table_name, ds, di_df="di", unique_columns=None, life
         where_cond = f"where ds >= '{get_days_ahead_ds(ds, days_ahead)}'"
 
     select_str = f'''
-        select 
-        {mysql_column_names_str},
-        '{ds}' as ds 
-        from (select *,
-        row_number() over (partition by {unique_columns_str} order by gmt_create desc) as rn
-        from 
-        {ods_table_name} 
-        {where_cond}
-        )a where rn = 1
+        SELECT 
+        {dw_column_names_str},
+        '{ds}' AS ds 
+        FROM (
+            SELECT *,
+            ROW_NUMBER() OVER (PARTITION BY {unique_columns_str} ORDER BY gmt_create DESC) AS rn
+            FROM 
+            {ods_table_name} 
+            {where_cond}
+        ) a 
+        WHERE rn = 1
     '''
 
     dwd_sql_str += select_str
     db = StarrocksDbUtil()
     db.run_sql(ods_sql_str)
-    ods_row_count = db.run_sql(f"select count(*) from {ods_table_name} where ds ='{ds}'")[0][0]
-    logger.info(f"ods sql finished. row count {ods_row_count}.")
+    if ods_dqc:
+        db.dqc_row_count(ods_table_name, ds)
+    else:
+        ods_row_count = db.run_sql(f"select count(*) from {ods_table_name} where ds ='{ds}'")[0][0]
+        logger.info(f"ods sql finished. row count {ods_row_count}.")
     db.run_sql(dwd_sql_str)
     logger.info("dwd sql finished.")
     db.dqc_row_count(dwd_table_name, ds)

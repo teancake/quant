@@ -13,6 +13,33 @@ logger = get_logger(__name__)
 
 def run_task(ds):
     temp_sql = f"""
+    DROP TABLE IF EXISTS temp_stock_zh_a_analysis_test;
+    CREATE TABLE IF NOT EXISTS temp_stock_zh_a_analysis_test AS 
+    SELECT b.*,
+           a.ret_jbpv,
+           a.ret_is_normal
+    FROM (
+      SELECT ticker,
+               jarque_bera_pval AS ret_jbpv,
+               IF(jarque_bera_pval < 0.05, 0, 1) AS ret_is_normal
+        FROM dwd_stock_zh_a_test_df
+        WHERE ds = "{ds}"
+        AND variable = "pct_chg"
+    ) a
+    JOIN (
+      SELECT ticker,
+             jarque_bera_pval AS logret_jbpv,
+             IF(jarque_bera_pval < 0.05, 0, 1) AS logret_is_normal,
+             adfpv AS logret_adfpv,
+             IF(adfpv < 0.05, 0, 1) AS is_non_stat,
+             lb_pvalue AS logret_lbpv,
+             IF(lb_pvalue < 0.05, 0, 1) AS is_white_noise
+      FROM dwd_stock_zh_a_test_df
+      WHERE ds = "{ds}"
+      AND variable = "logret"
+    ) AS b
+    ON a.ticker = b.ticker;
+    
     ##--
     DROP TABLE IF EXISTS temp_stock_zh_a_analysis_a;
     CREATE TABLE IF NOT EXISTS temp_stock_zh_a_analysis_a AS 
@@ -27,7 +54,15 @@ def run_task(ds):
              pe_ttm,
              pb,
              total_mv,
-             d.alpha as ff3_alpha
+             d.alpha as ff3_alpha,
+             logret_jbpv,
+             logret_is_normal,
+             logret_adfpv,
+             is_non_stat,
+             logret_lbpv,
+             is_white_noise,
+             ret_jbpv,
+             ret_is_normal
     FROM 
     (SELECT *
         FROM dwd_stock_zh_a_stats_df
@@ -40,17 +75,19 @@ def run_task(ds):
         WHERE ds = "{ds}"
         )b
         ON a.symbol=b.symbol
-    JOIN 
+    LEFT JOIN 
         (SELECT *, regexp_replace(ts_code,"[^0-9]","") AS symbol
         FROM dwd_tushare_daily_basic_df
         WHERE ds = "{ds}"
         AND trade_date=ds
         )c
         ON a.symbol=c.symbol
-    JOIN (SELECT * FROM dwd_ff3_alpha_beta_df 
+    LEFT JOIN (SELECT * FROM dwd_ff3_alpha_beta_df 
         WHERE ds = "{ds}"
         )d 
-        ON a.symbol = d.ticker; 
+        ON a.symbol = d.ticker
+    LEFT JOIN  temp_stock_zh_a_analysis_test f
+        ON a.symbol = f.ticker;
 
     ##-- 
     DROP TABLE IF EXISTS temp_stock_zh_a_analysis_b; 
@@ -62,9 +99,11 @@ def run_task(ds):
             avg(pb) OVER (partition by 行业) AS pb_industry, 
             rank()  OVER (partition by 行业 ORDER BY  pb asc) AS pb_rank_industry,
             avg(pe) OVER (partition by 行业) AS pe_industry, 
-            rank()  OVER (partition by 行业 ORDER BY  pe asc) AS pe_rank_industry,
+            rank()  OVER (partition by 行业 ORDER BY  pe_ttm asc) AS pe_rank_industry,
             avg(total_mv) OVER (partition by 行业) AS total_mv_industry, 
             rank()  OVER (partition by 行业 ORDER BY total_mv asc) AS total_mv_rank_industry,
+            rank() OVER (order by total_mv) AS total_mv_rank,
+            count(*) over () as cnt, 
             count(*) over (partition by 行业) as cnt_industry 
         FROM temp_stock_zh_a_analysis_a
         )a ; 
@@ -72,12 +111,44 @@ def run_task(ds):
     ##--
     DROP TABLE IF EXISTS temp_stock_zh_a_analysis_c; 
     CREATE TABLE IF NOT EXISTS temp_stock_zh_a_analysis_c AS 
-    SELECT a.*,
-             b.*,
-             ESG等级,
-             环境等级,
-             社会等级,
-             公司治理等级
+    SELECT a.ds,
+        a.symbol,
+        简称,
+        sharpe,
+        beta,
+        alpha,
+        行业,
+        pe,
+        pe_ttm,
+        pb,
+        total_mv,
+        ff3_alpha,
+        pb_industry,
+        pb_rank_industry,
+        pe_industry,
+        pe_rank_industry,
+        total_mv_industry,
+        total_mv_rank_industry,
+        total_mv_rank,
+        cnt,
+        cnt_industry,
+        dist_from_avg,
+        代码,
+        ma20_diff,
+        close,
+        ma_20,
+        ESG等级,
+        环境等级,
+        社会等级,
+        公司治理等级,
+        logret_jbpv,
+        logret_is_normal,
+        logret_adfpv,
+        is_non_stat,
+        logret_lbpv,
+        is_white_noise,
+        ret_jbpv,
+        ret_is_normal
     FROM temp_stock_zh_a_analysis_b a
     JOIN 
         (SELECT 代码,
@@ -88,7 +159,7 @@ def run_task(ds):
         WHERE 日期="{ds}" 
         )b
         ON a.symbol=b.代码
-    JOIN 
+    LEFT JOIN 
         (SELECT symbol,
              ESG等级,
              环境等级,

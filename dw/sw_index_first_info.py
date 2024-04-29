@@ -10,7 +10,7 @@ from utils.stock_zh_a_util import is_trade_date
 
 from utils.log_util import get_logger
 from base_data import BaseData
-
+from utils.net_util import set_default_user_agent
 logger = get_logger(__name__)
 
 '''
@@ -32,6 +32,7 @@ class SwIndexFirstInfo(BaseData):
         return "sw_index_first_info"
 
     def get_df_schema(self):
+        set_default_user_agent()
         df = ak.sw_index_first_info()
         df["TTM滚动市盈率"] = df["TTM(滚动)市盈率"]
         df.drop(columns=["TTM(滚动)市盈率"], inplace=True)
