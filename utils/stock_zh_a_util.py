@@ -96,6 +96,11 @@ def get_trade_dates():
 def get_stock_list():
     return sorted(list(get_stock_map().keys()))
 
+def get_normal_stock_list():
+    ds = (datetime.now() - timedelta(days=7)).strftime("%Y%m%d")
+    results = DbUtil().run_sql("SELECT distinct 代码 from stock_zh_a where ds >= {} AND 名称 not regexp 'ST|退|PT' and 代码 regexp '600|601|603|000' order by 代码".format(ds))
+    return [item[0] for item in results]
+
 
 def get_index_map():
     ds = (datetime.now() - timedelta(days=7)).strftime("%Y%m%d")
