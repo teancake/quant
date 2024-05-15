@@ -240,24 +240,23 @@ class StarrocksDbUtil:
     server_address, port, db_name, user, password = get_starrocks_config()
     engine = sqlalchemy.create_engine(f"starrocks://{user}:{password}@{server_address}:{port}/{db_name}?charset=utf8", connect_args={'connect_timeout': 600})
 
-    def __init__(self):
-        pass
+    @classmethod
+    def get_db_engine(cls):
+        return cls.engine
 
-    def get_db_engine(self):
-        return self.engine
-
-    def table_exists(self, table_name):
+    @classmethod
+    def table_exists(cls, table_name):
         sql = f"SHOW TABLES LIKE '{table_name}'"
-        res = self.run_sql(sql)
+        res = cls.run_sql(sql)
         return len(res) > 0
 
-
-    def run_sql(self, sql, log=True, chunksize=None):
+    @classmethod
+    def run_sql(cls, sql, log=True, chunksize=None):
         if log:
             logger.info("run sql: {}".format(sql))
         sql = sqlalchemy.text(sql)
         result = []
-        with self.get_db_engine().connect() as con:
+        with cls.get_db_engine().connect() as con:
             try:
                 if chunksize:
                     # cursor_result = con.execution_options(yield_per=1).execute(sql)
@@ -279,9 +278,10 @@ class StarrocksDbUtil:
 
         return result
 
-    def dqc_row_count(self, table_name, ds):
+    @classmethod
+    def dqc_row_count(cls, table_name, ds):
         dqc_sql = "select count(*) from {} where ds = '{}'".format(table_name, ds)
-        row_count = self.run_sql(dqc_sql)[0][0]
+        row_count = cls.run_sql(dqc_sql)[0][0]
         if row_count == 0:
             raise Exception("data quality check failed: row count is 0. table {}, ds {}".format(table_name, ds))
 

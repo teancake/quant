@@ -27,3 +27,10 @@ def get_data_config():
     conf = client.get_config(data_id, group)
     conf = yaml.safe_load(conf)
     return conf
+
+def get_ollama_config():
+    data_id = "quant-common-rag.yml"
+    conf = client.get_config(data_id, group)
+    conf = yaml.safe_load(conf)
+    return conf["ollama"]
+

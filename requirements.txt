@@ -26,3 +26,4 @@ retrying
 statsmodels
 backtrader
 PyPortfolioOpt
+ollama

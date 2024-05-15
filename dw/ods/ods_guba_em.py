@@ -15,4 +15,4 @@ if __name__ == '__main__':
     ds = sys.argv[1]
     logger.info("execute task on ds {}".format(ds))
     mysql_table_name = "guba_em"
-    dwd_table_name = mysql_to_ods_dwd(mysql_table_name, ds, di_df="di", lifecycle=3650)
+    dwd_table_name = mysql_to_ods_dwd(mysql_table_name, ds, di_df="di", unique_columns=["symbol", "post_id"], lifecycle=3650)
