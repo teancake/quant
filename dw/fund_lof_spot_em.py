@@ -26,8 +26,8 @@ LOF基金实时行情-东财
 
 
 class FundLofSpotEm(BaseData):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, ds):
+        super().__init__(ds)
 
     def get_table_name(self):
         return "fund_lof_spot_em"
@@ -51,6 +51,6 @@ if __name__ == '__main__':
         logger.info(f"{ds} is not trade date. task exits.")
         exit(os.EX_OK)
 
-    spot_em = FundLofSpotEm()
+    spot_em = FundLofSpotEm(ds)
     spot_em.retrieve_data()
     spot_em.clean_up_history(lifecycle=60)

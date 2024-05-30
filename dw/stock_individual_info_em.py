@@ -13,7 +13,8 @@ from base_data import BaseData
 
 logger = get_logger(__name__)
 from utils.stock_zh_a_util import is_trade_date
-
+import random
+import traceback
 '''
 个股信息查询
 接口: stock_individual_info_em
@@ -47,21 +48,50 @@ class StockIndividualInfoEm(BaseData):
         print(temp_dict)
         return pd.DataFrame(temp_dict)
 
+    def get_downloaded_symbols(self):
+        symbol_col_name = "股票代码"
+        sql = f"SELECT distinct {symbol_col_name} from {self.get_table_name()}  where ds = '{self.ds}'"
+        recs = self.db.run_sql(sql)
+        return [rec[0] for rec in recs]
+
+
+class DataHelper:
+
+    def rate_limiter_sleep(self, timer_start, loops_per_second_min, loops_per_second_max):
+        loop_time_second_min = 1.0 / loops_per_second_max
+        loop_time_second_max = 1.0 / loops_per_second_min
+        dt = time.time() - timer_start
+        if dt < loop_time_second_min:
+            random_time = random.random() * (loop_time_second_max - loop_time_second_min) + loop_time_second_min - dt
+            logger.info(f"dt is {dt} less than minimum loop time {loop_time_second_min}, sleep {random_time} seconds")
+            time.sleep(random_time)
+
+    def get_all_symbols(self, ds):
+        data = StockIndividualInfoEm()
+        data.set_ds(ds)
+        symbol_list = stock_zh_a_util.get_stock_list()
+        downloaded_symbols = data.get_downloaded_symbols()
+        for symbol in symbol_list:
+            timer_start = time.time()
+            try:
+                logger.info("process symbol {}".format(symbol))
+                if symbol in downloaded_symbols:
+                    logger.info(f"symbol {symbol} already downloaded. skip downloading.")
+                    continue
+                data.set_symbol(symbol)
+                data.retrieve_data()
+                logger.info("symbol {} done".format(symbol))
+            except Exception:
+                logger.error(f"exception occurred while processing symbol {symbol}")
+                logger.error(traceback.format_exc())
+            self.rate_limiter_sleep(timer_start, loops_per_second_min=1, loops_per_second_max=2)
+
+        data.clean_up_history(lifecycle=30)
+
 
 
 
 if __name__ == '__main__':
     ds = sys.argv[1]
     logger.info("execute task on ds {}".format(ds))
-    if not is_trade_date(ds):
-        logger.info(f"{ds} is not trade date. task exits.")
-        exit(os.EX_OK)
-    data = StockIndividualInfoEm()
-    symbol_list = stock_zh_a_util.get_stock_list()
-    for symbol in symbol_list:
-        logger.info("process symbol {}".format(symbol))
-        data.set_symbol(symbol)
-        data.retrieve_data()
-        logger.info("symbol {} done".format(symbol))
-        time.sleep(0.5)
-    data.clean_up_history()
+    DataHelper().get_all_symbols(ds)

@@ -134,6 +134,7 @@ def load_params():
                   'max_bin': 4005,
                   'min_data_in_leaf': 45,
                   'num_iterations': 285,
+                  "num_threads": 8
                   }
     params["boosting_type"] = boosting_type
     params["objective"] = "regression"
@@ -297,7 +298,8 @@ def train_optuna(trial):
         "min_child_samples": trial.suggest_int("min_child_samples", 5, 1000),
         "max_bin": trial.suggest_int("max_bin", 5, 5000),
         "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 5, 10000, log=True),
-        "num_iterations": trial.suggest_int("num_iterations", 50, 200)
+        "num_iterations": trial.suggest_int("num_iterations", 50, 200),
+        "num_threads": 8
     }
 
     dtrain = lgb.Dataset(train_x, label=train_y, feature_name=feature_names,

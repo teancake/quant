@@ -25,8 +25,8 @@ ETF基金实时行情-东财
 
 
 class FundEtfSpotEm(BaseData):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, ds):
+        super().__init__(ds)
 
     def get_table_name(self):
         return "fund_etf_spot_em"
@@ -50,6 +50,6 @@ if __name__ == '__main__':
         logger.info(f"{ds} is not trade date. task exits.")
         exit(os.EX_OK)
 
-    spot_em = FundEtfSpotEm()
+    spot_em = FundEtfSpotEm(ds)
     spot_em.retrieve_data()
     spot_em.clean_up_history(lifecycle=60)

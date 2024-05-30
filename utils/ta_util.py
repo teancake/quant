@@ -6,13 +6,14 @@ import MyTT as tt
 
 def get_ta_indicator_map(data_df: pd.DataFrame):
     data_df.sort_values(by="日期", ascending=True, inplace=True)
+    data_df.reset_index(drop=True, inplace=True)
     open_ = data_df['开盘'].fillna(0).to_numpy()
     close = data_df['收盘'].fillna(0).to_numpy()
     high = data_df['最高'].fillna(0).to_numpy()
     low = data_df['最低'].fillna(0).to_numpy()
     vol = data_df['成交量'].fillna(0).to_numpy()
 
-    ti_map = {}
+    ti_map = {"close": close}
     ti_map["ma_5"] = tt.MA(close, 5)
     ti_map["ma_10"] = tt.MA(close, 10)
     ti_map["ma_20"] = tt.MA(close, 20)

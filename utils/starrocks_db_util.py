@@ -83,16 +83,19 @@ def get_days_ahead_ds(ds, days):
 def _get_cols_str(cols, rename_cols):
     if rename_cols is None:
         rename_cols = {}
-    mysql_columns_str = ", ".join([f"{key} {value}" for key, value in cols.items()])
-    mysql_column_names_str = ", ".join(cols.keys())
-    dw_columns_str = ", ".join([f"{rename_cols.get(key, key)} {value}" for key, value in cols.items() if key != "ds"])
-    dw_column_names_str = ", ".join([rename_cols.get(key, key) for key in cols.keys() if key != "ds"])
-    rename_column_names_str = ", ".join([f"{key} AS {rename_cols.get(key)}" if key in rename_cols.keys() else key for key in cols.keys() if key != "ds"])
+    def escape(key):
+        return f"`{key}`"
+
+    mysql_columns_str = ", ".join([f"{escape(key)} {value}" for key, value in cols.items()])
+    mysql_column_names_str = ", ".join([f"{escape(key)}" for key in cols.keys()])
+    dw_columns_str = ", ".join([f"{escape(rename_cols.get(key, key))} {value}" for key, value in cols.items() if key != "ds"])
+    dw_column_names_str = ", ".join([f"{escape(rename_cols.get(key, key))}" for key in cols.keys() if key != "ds"])
+    rename_column_names_str = ", ".join([f"{escape(key)} AS {rename_cols.get(key)}" if key in rename_cols.keys() else escape(key) for key in cols.keys() if key != "ds"])
     return mysql_columns_str, mysql_column_names_str, dw_columns_str, dw_column_names_str, rename_column_names_str
 
 
 def mysql_to_ods_dwd(mysql_table_name, ds, di_df="di", unique_columns=None, lifecycle=62, days_ahead=15,
-                     rename_columns=None, use_mysql_table_ds=True, mysql_whole_table=False, ods_dqc=True):
+                     rename_columns=None, use_mysql_table_ds=True, mysql_where_cond=None, ods_dqc=True):
     cols = get_table_columns(mysql_table_name)
     mysql_columns_str, _, dw_columns_str, dw_column_names_str, rename_column_names_str = _get_cols_str(cols, rename_columns)
     ods_table_name = f"ods_{mysql_table_name}"
@@ -105,13 +108,12 @@ def mysql_to_ods_dwd(mysql_table_name, ds, di_df="di", unique_columns=None, life
 
     server_address, port, db_name, user, password = get_mysql_config()
 
-    if use_mysql_table_ds:
-        mysql_where_cond = f"WHERE ds = {ds}"
-    else:
-        mysql_where_cond = f"WHERE DATE_FORMAT(gmt_create, '%Y%m%d') = {ds}"
-
-    if mysql_whole_table:
-        mysql_where_cond = ""
+    if mysql_where_cond is None or mysql_where_cond == "":
+        if use_mysql_table_ds:
+            mysql_where_cond = f"ds = {ds}"
+        else:
+            mysql_where_cond = f"DATE_FORMAT(gmt_create, '%Y%m%d') = {ds}"
+    mysql_where_cond = f"WHERE {mysql_where_cond}"
 
     ods_sql_str = f'''
         CREATE TABLE IF NOT EXISTS `external_{mysql_table_name}` ( 
@@ -272,9 +274,12 @@ class StarrocksDbUtil:
                 else:
                     cursor_result = con.execute(sql)
                     result = list(cursor_result)
-            except Exception as e:
-                # if there are no results returned, exception will be ignored.
+            except sqlalchemy.exc.ResourceClosedError as e:
                 logger.info(e)
+
+            # except Exception as e:
+            #     # if there are no results returned, exception will be ignored.
+            #     logger.info(e)
 
         return result
 

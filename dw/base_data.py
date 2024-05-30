@@ -12,18 +12,21 @@ from datetime import datetime, timedelta
 import pytz
 
 from requests.exceptions import RequestException
+import random
+import traceback
+from joblib import Parallel, delayed
 
 logger = get_logger(__name__)
-
+from tqdm import tqdm
 
 
 class BaseData(ABC):
 
-    def __init__(self):
+    def __init__(self, ds=None):
         self.db = DbUtil()
         self.engine = self.db.get_db_engine()
         self.table_name = self.get_table_name()
-        self.ds = self.generate_default_ds()
+        self.ds = self.generate_default_ds() if ds is None else ds
 
     def table_exists(self):
         sql = f"SHOW TABLES LIKE '{self.table_name}'"
@@ -78,16 +81,86 @@ class BaseData(ABC):
     def retrieve_data(self):
         self.before_retrieve_data()
         df_schema = self.get_df_schema_with_retry()
+        if len(df_schema) == 0:
+            logger.info("data size 0, no db write required.")
+            return
         logger.info("data retrieved.")
         dt = datetime.now().astimezone(pytz.timezone("Asia/Shanghai"))
         df_schema.insert(0, "gmt_create", dt)
         df_schema.insert(1, "gmt_modified", dt)
         df_schema.insert(len(df_schema.columns), "ds", self.ds)
-        df_schema.to_sql(name=self.table_name, con=self.engine, if_exists='append', index=False, method="multi", chunksize=10000)
+        df_schema.to_sql(name=self.table_name, con=self.engine, if_exists='append', index=False, method="multi", chunksize=5000)
         self.add_ds_index()
         logger.info("{} data records written to table {}, ds={}".format(df_schema.shape[0], self.table_name, self.ds))
 
 
     def clean_up_history(self, lifecycle=30):
+        if not self.table_exists():
+            logger.info(f"table {self.table_name} does not exist, clean up history aborted.")
+            return
         ds_cl = (datetime.strptime(self.ds, '%Y%m%d') - timedelta(days=lifecycle)).strftime("%Y%m%d")
         self.delete_records("ds < {}".format(ds_cl))
+
+
+class BaseDataHelper(ABC):
+    def __init__(self, loops_per_second_min=1, loops_per_second_max=2, parallel=1):
+        if loops_per_second_min is None:
+            loops_per_second_min = loops_per_second_max
+        self.loops_per_second_min = loops_per_second_min
+        self.loops_per_second_max = loops_per_second_max
+        self.parallel = parallel
+
+    def rate_limiter_sleep(self, timer_start):
+        # the reason to set loops_per_second_min is to have a random sleep time
+        loops_per_second_min, loops_per_second_max = self.loops_per_second_min, self.loops_per_second_max
+        if loops_per_second_max is None:
+            return
+        loop_time_second_min = 1.0 / loops_per_second_max
+        loop_time_second_max = 1.0 / loops_per_second_min
+        dt = time.time() - timer_start
+        if dt < loop_time_second_min:
+            random_time = random.random() * (loop_time_second_max - loop_time_second_min) + loop_time_second_min - dt
+            logger.info(f"dt is {dt} less than minimum loop time {loop_time_second_min}, sleep {random_time} seconds")
+            time.sleep(random_time)
+
+    @abstractmethod
+    def _get_downloaded_symbols(self):
+        pass
+
+    @abstractmethod
+    def _get_all_symbols(self):
+        pass
+
+    @abstractmethod
+    def _fetch_symbol_data(self, symbol):
+        pass
+
+    @abstractmethod
+    def _clean_up_history(self):
+        pass
+    def fetch_all_data(self):
+        symbol_list = self._get_all_symbols()
+        downloaded_symbols = self._get_downloaded_symbols()
+        logger.info(f"{len(downloaded_symbols)} of {len(symbol_list)} symbols already exist, only process the remaining")
+        symbol_list = set(symbol_list) - set(downloaded_symbols)
+        if self.parallel > 1:
+            self._fetch_all_data_parallel(symbol_list, self.parallel)
+        else:
+            self._fetch_all_data_serial(symbol_list)
+
+        self._clean_up_history()
+
+    def _fetch_all_data_serial(self, symbol_list):
+        for symbol in tqdm(symbol_list):
+            timer_start = time.time()
+            try:
+                logger.info("process symbol {}".format(symbol))
+                self._fetch_symbol_data(symbol)
+                logger.info("symbol {} done".format(symbol))
+            except Exception:
+                logger.error(f"exception occurred while processing symbol {symbol}")
+                logger.error(traceback.format_exc())
+            self.rate_limiter_sleep(timer_start)
+
+    def _fetch_all_data_parallel(self, symbol_list, parallel):
+        Parallel(n_jobs=parallel, backend="multiprocessing")(delayed(self._fetch_symbol_data)(symbol) for symbol in tqdm(symbol_list))

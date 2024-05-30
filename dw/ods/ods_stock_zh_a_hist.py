@@ -1,13 +1,12 @@
 import sys, os
-
-parent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.append(parent_dir)
+
 
 from utils.log_util import get_logger
 from utils.starrocks_db_util import mysql_to_ods_dwd
 from utils.stock_zh_a_util import is_trade_date
 
-import sys
 
 logger = get_logger(__name__)
 
@@ -17,6 +16,5 @@ if __name__ == '__main__':
     if not is_trade_date(ds):
         logger.info(f"{ds} is not trade date. task exits.")
         exit(os.EX_OK)
-
-    mysql_table_name = "fund_lof_hist_em"
-    mysql_to_ods_dwd(mysql_table_name, ds, di_df="df", unique_columns=["日期", "symbol", "period", "adjust"])
+    mysql_table_name = "stock_zh_a_hist"
+    mysql_to_ods_dwd(mysql_table_name, ds, di_df="df", rename_columns={"symbol": "代码"}, unique_columns=["日期", "代码", "period", "adjust"])

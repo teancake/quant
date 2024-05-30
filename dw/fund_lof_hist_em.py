@@ -58,7 +58,7 @@ class FundLofHistEm(BaseData):
         # period_list = ["daily", "weekly", "monthly"]
         period_list = self.period_list
         # qfq: 返回前复权后的数据; hfq: 返回后复权后的数据
-        adjust_list = ["hfq"]
+        adjust_list = ["qfq", "hfq"]
         df_list = []
         for period in period_list:
             for adjust in adjust_list:

@@ -71,7 +71,7 @@ def run_task(ds):
         FROM dwd_stock_zh_a_stats_df
         WHERE ds = "{ds}"
         )a
-    JOIN 
+    LEFT JOIN 
         (SELECT *,
              代码 AS symbol
         FROM dwd_stock_individual_info_em_df
@@ -156,7 +156,7 @@ def run_task(ds):
         ret_jbpv,
         ret_is_normal
     FROM temp_stock_zh_a_analysis_b a
-    JOIN 
+    LEFT JOIN 
         (SELECT 代码,
              (close-ma_20)/ma_20 AS ma20_diff,
              close,

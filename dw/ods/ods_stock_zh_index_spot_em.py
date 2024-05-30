@@ -1,7 +1,7 @@
 import sys, os
-
-parent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.append(parent_dir)
+
 
 from utils.log_util import get_logger
 from utils.starrocks_db_util import mysql_to_ods_dwd
@@ -18,7 +18,7 @@ if __name__ == '__main__':
         logger.info(f"{ds} is not trade date. task exits.")
         exit(os.EX_OK)
 
-    mysql_table_name = "fund_lof_spot_em"
+    mysql_table_name = "stock_zh_index_spot_em"
     mysql_to_ods_dwd(mysql_table_name, ds)
 
 

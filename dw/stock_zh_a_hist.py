@@ -9,9 +9,9 @@ from datetime import datetime, timedelta
 
 
 from utils.log_util import get_logger
-from base_data import BaseData
+from base_data import BaseData, BaseDataHelper
 from utils import stock_zh_a_util
-from utils.stock_zh_a_util import is_trade_date, is_backfill
+from utils.stock_zh_a_util import is_trade_date, is_backfill, get_stock_list
 
 logger = get_logger(__name__)
 
@@ -32,18 +32,13 @@ import sys
 
 
 class StockZhAHist(BaseData):
-    def __init__(self, symbol=None, backfill=False, period_list=None):
+    def __init__(self, ds, symbol=None, backfill=False, period=None, adjust=None):
+        super().__init__()
+        self.ds = ds
         self.symbol = symbol
         self.backfill = backfill
-        if isinstance(period_list, list) and all(item in ["daily", "weekly", "monthly"] for item in period_list):
-            self.period_list = period_list
-        else:
-            logger.warn("some elements in period_list {} not recognized, should be daily, weekly, or monthly. Use daily as default.".format(period_list))
-            self.period_list = ["daily"]
-        super().__init__()
-
-    def set_symbol(self, symbol):
-        self.symbol = symbol
+        self.period = period
+        self.adjust = adjust
 
     def get_table_name(self):
         return "stock_zh_a_hist"
@@ -52,19 +47,9 @@ class StockZhAHist(BaseData):
         pass
 
     def get_df_schema(self):
-        # period_list = ["daily", "weekly", "monthly"]
-        period_list = self.period_list
-        # qfq: 返回前复权后的数据; hfq: 返回后复权后的数据
-        adjust_list = ["hfq", "qfq"]
-        df_list = []
-        for period in period_list:
-            for adjust in adjust_list:
-                logger.info(f"retrieving symbol {self.symbol} on ds {self.ds} for period {period}, adjust {adjust}.")
-                df = self.get_single_df(self.symbol, period, adjust, self.ds, self.backfill)
-                df_list.append(df)
-            time.sleep(1)
-        df_schema = pd.concat(df_list)
-        return df_schema
+        logger.info(f"retrieving symbol {self.symbol} on ds {self.ds} for period {self.period}, adjust {self.adjust}.")
+        df = self.get_single_df(self.symbol, self.period, self.adjust, self.ds, self.backfill)
+        return df
 
     def get_single_df(self, symbol, period, adjust, ds, backfill):
         # restrict end data to ds
@@ -81,47 +66,48 @@ class StockZhAHist(BaseData):
         return df
 
     def get_downloaded_symbols(self):
-        sql = f"SELECT distinct symbol from {self.get_table_name()}  where ds = '{self.ds}'"
+        sql = f"SELECT distinct symbol from {self.get_table_name()}  where ds = '{self.ds}' and adjust='{self.adjust}' and period='{self.period}'"
         recs = self.db.run_sql(sql)
         return [rec[0] for rec in recs]
 
 
-class DataHelper:
 
-    def get_all_symbols(self):
-        data = StockZhAHist(backfill=backfill, period_list=period_list)
-        data.set_ds(ds)
-        symbol_list = stock_zh_a_util.get_stock_list()
-        downloaded_symbols = data.get_downloaded_symbols()
-        for symbol in symbol_list:
-            logger.info("process symbol {}".format(symbol))
-            if symbol in downloaded_symbols:
-                logger.info(f"symbol {symbol} already downloaded. skip downloading.")
-                continue
-            data.set_symbol(symbol)
-            data.retrieve_data()
-            logger.info("symbol {} done".format(symbol))
 
-        data.clean_up_history(lifecycle=30)
+class DataHelper(BaseDataHelper):
+    def __init__(self, ds, adjust, period, backfill):
+        self.ds = ds
+        self.adjust = adjust
+        self.period = period
+        self.backfill = backfill
+        super().__init__(parallel=1, loops_per_second_min=0.5, loops_per_second_max=2)
+
+    def _get_all_symbols(self):
+        return get_stock_list()
+
+    def _get_downloaded_symbols(self):
+        data = StockZhAHist(ds=self.ds, adjust=self.adjust, period=self.period)
+        return data.get_downloaded_symbols()
+
+    def _fetch_symbol_data(self, symbol):
+        data = StockZhAHist(ds=self.ds, symbol=symbol, adjust=self.adjust, period=self.period, backfill=self.backfill)
+        data.retrieve_data()
+
+    def _clean_up_history(self):
+        data = StockZhAHist(ds=self.ds)
+        data.clean_up_history(lifecycle=15)
+
+
 
 if __name__ == '__main__':
     ds = sys.argv[1]
-    logger.info("execute task on ds {}".format(ds))
+    adjust = "hfq"
+    if len(sys.argv) > 1:
+        adjust = sys.argv[2]
+    logger.info("execute task on ds {}, adjust {}".format(ds, adjust))
     if not is_trade_date(ds):
         logger.info(f"{ds} is not trade date. task exits.")
         exit(os.EX_OK)
 
-    period_list = ["daily"] if len(sys.argv) <= 2 else [sys.argv[2]]
     backfill = is_backfill(ds)
-    logger.info("ds {}, execute {} task, backfill {}".format(ds, period_list, backfill))
-
-    DataHelper().get_all_symbols()
-
-    # if backfill:
-    #     delete_ds = (datetime.strptime(ds, '%Y%m%d') - timedelta(days=14)).strftime("%Y%m%d")
-    #     logger.info("clearing historical data after back fill, data before ds {} will be deleted.".format(delete_ds))
-    #     cond = "ds <= '{}'".format(delete_ds)
-    #     data.delete_records(conditions=cond)
-    #     logger.info("clearing historical data done.")
-
-
+    logger.info(f"ds {ds}, backfill {backfill}, ajust {adjust}, period daily")
+    DataHelper(ds, adjust=adjust, period="daily", backfill=backfill).fetch_all_data()

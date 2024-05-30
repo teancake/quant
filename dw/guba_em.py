@@ -1,3 +1,8 @@
+import sys, os
+parent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+sys.path.append(parent_dir)
+
+
 import random
 
 import pandas as pd
@@ -6,7 +11,7 @@ import json
 import time
 import sys
 
-from base_data import BaseData
+from dw.base_data import BaseData
 from utils.log_util import get_logger
 
 logger = get_logger(__name__)
@@ -16,7 +21,8 @@ from utils.config_util import get_ollama_config
 from ollama import Client
 import re
 import traceback
-
+from datetime import datetime
+from tqdm import tqdm
 
 def guba_em(symbol: str = "600000"):
     requests.utils.default_user_agent = lambda: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"
@@ -31,7 +37,7 @@ def guba_em(symbol: str = "600000"):
         "version": 200,
         "product": "Guba",
         "plat": "Web",
-        "_": "1715567595846",
+        "_": int(time.time()*1000),
     }
     r = requests.get(url, params=params)
     data_text = r.text
@@ -106,6 +112,49 @@ class SentimentAnalyser:
             logger.warning(f"exception occurred, content {content}")
             return dict()
 
+    @classmethod
+    def sentiment_analysis_batch(cls, df):
+        batch_size = 1
+        for i in range(0, len(df), batch_size):
+            batch_df = df.iloc[i:i + batch_size]
+            batch_df = cls._chat(batch_df.reset_index(drop=True))
+            df.iloc[i:i + batch_size] = batch_df
+        return df
+
+    @classmethod
+    def _chat_batch(cls, df):
+        post_titles = df.apply(lambda row: f"{row.name + 1}. {row['post_title']}", axis=1).to_list()
+        message = "\n ".join(post_titles)
+        res_df = pd.DataFrame(index=range(len(df)), columns=["sentiment", "reason"])
+        logger.info(f"message {message}")
+        content = None
+        try:
+            response = cls.client.chat(model=cls.model, messages=[
+                {
+                    "role": "system",
+                    "content": f"你是一个股票分析师，下面有{len(post_titles)}句话，判断每句话中说话人对该股票的情绪，并解释原因，不能使用引号括号等特殊字符。输出使用JSON数组格式，数组的元素是每句话的结果，字段为row_number, sentiment, reason。row_number为行号，从1开始， sentiment为情绪，可接受的值为正面，中性或者负面中最可能的一个，reason是原因。请仔细检查输出格式确保为正确的JSON数组。",
+                },
+                {
+                    "role": "user",
+                    "content": f'{message}',
+                },
+            ])
+            content = response["message"]["content"].replace("\n", "")
+            logger.info(f"response content {content}")
+            pattern = r"(\[.*\])"
+            match = re.search(pattern, content)
+            if not match:
+                logger.warning(f"regexp match failed, content {content}")
+            js = json.loads(match.group(1))
+            res_df = pd.DataFrame(js)
+            res_df = res_df.drop("row_number", axis=1)
+            print(f"res_df {res_df}")
+        except Exception as e:
+            logger.error(traceback.format_exception(e))
+            logger.warning(f"exception occurred, content {content}")
+        return df.join(res_df)
+
+
 class GubaEm(BaseData):
     def __init__(self, ds, symbol, enable_sentiment=False):
         super().__init__()
@@ -121,6 +170,8 @@ class GubaEm(BaseData):
 
     def get_df_schema(self):
         df = guba_em(symbol=self.symbol)
+        df = df[df["post_publish_time"].apply(lambda row: pd.to_datetime(row).date() == datetime.strptime(self.ds, "%Y%m%d").date())]
+        df = df.reset_index(drop=True)
         df.insert(loc=0, column="symbol", value=self.symbol)
         if self.enable_sentiment:
             df = SentimentAnalyser.sentiment_analysis(df)
@@ -158,7 +209,7 @@ class DataHelper:
 
         logger.info(f"downloaded symbols {downloaded_symbols}")
         symbols = sorted(set(symbols) - set(downloaded_symbols))
-        for symbol in symbols:
+        for symbol in tqdm(symbols):
             timer_start = time.time()
             try:
                 logger.info(f"retrieving symbol {symbol} on ds {ds}.")

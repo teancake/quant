@@ -1,6 +1,5 @@
 import sys, os
-
-parent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 sys.path.append(parent_dir)
 
 from utils.log_util import get_logger
@@ -18,5 +17,10 @@ if __name__ == '__main__':
         logger.info(f"{ds} is not trade date. task exits.")
         exit(os.EX_OK)
 
-    mysql_table_name = "fund_etf_hist_em"
-    mysql_to_ods_dwd(mysql_table_name, ds, di_df="df", unique_columns=["日期", "symbol", "period", "adjust"])
+    mysql_table_name = "fund_etf_spot_em"
+    mysql_to_ods_dwd(mysql_table_name, ds)
+
+
+
+
+

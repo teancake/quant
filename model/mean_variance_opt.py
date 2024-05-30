@@ -25,8 +25,6 @@ class MeanVarianceOptimizer:
         df_list = []
         for stock in symbols:
             df = get_stock_data(stock, ds=self.ds, start_date=self.start_date, yf_compatible=True)
-            levels = [df.index, [stock]*len(df)]
-            df.index = pd.MultiIndex.from_arrays(levels, names=["date", "ticker"])
             df_list.append(df)
         data = pd.concat(df_list)
         data = data.unstack()

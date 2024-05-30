@@ -139,6 +139,7 @@ from (
     select *
     from dwd_stock_zh_a_ti_hist_df
     where ds in (select max(ds) from dwd_stock_zh_a_ti_hist_df)
+    and adjust='hfq' and period='daily'
     ) a
 join temp_stock_zh_a_hist_filter b 
 on a.代码 = b.代码 and a.日期 = b.日期

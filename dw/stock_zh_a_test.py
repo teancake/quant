@@ -14,17 +14,15 @@ from statsmodels.tsa.stattools import adfuller, kpss
 from statsmodels.stats.diagnostic import acorr_ljungbox
 
 
-from utils.stock_zh_a_util import get_stock_data, is_trade_date
+from utils.stock_zh_a_util import get_stock_data, is_trade_date, get_zh_securities_data
 from dw.base_data import BaseData
 
 from utils.log_util import get_logger
 logger = get_logger(__name__)
 
-def get_return(ds, days_ahead=365):
+def get_return(ds, security_type, days_ahead=365):
     start_date = datetime.strptime(ds, "%Y%m%d") - timedelta(days=days_ahead)
-    df = get_stock_data("all", ds=ds, start_date=start_date, yf_compatible=True)
-    levels = [df.index, df.symbol]
-    df.index = pd.MultiIndex.from_arrays(levels, names=["date", "ticker"])
+    df = get_zh_securities_data("all", ds=ds, start_date=start_date, yf_compatible=True, security_type=security_type)
     df = df.sort_index(level=["date", "ticker"], ascending=[True, True])
     df["pct_chg"] = df["close"].groupby(level="ticker").pct_change().dropna()
     df["logret"] = np.log(df["close"] / df["close"].groupby(level="ticker").shift(1))
@@ -83,8 +81,11 @@ def compute_metrics(data):
 
 
 class StockZhATest(BaseData):
+    def __init__(self, ds, security_type="stock_zh_a"):
+        super().__init__(ds)
+        self.security_type = security_type
     def get_df_schema(self):
-        data = get_return(self.ds)
+        data = get_return(self.ds, security_type = self.security_type)
         df = compute_metrics(data)
         return df
 
@@ -101,8 +102,11 @@ if __name__ == '__main__':
     if not is_trade_date(ds):
         logger.info(f"{ds} is not trade date. task exits.")
         exit(os.EX_OK)
-    data = StockZhATest()
-    data.set_ds(ds)
-    data.retrieve_data()
+    logger.info("computing stock_zh_a")
+    StockZhATest(ds, security_type="stock_zh_a").retrieve_data()
+    logger.info("computing fund_etf")
+    StockZhATest(ds, security_type="fund_etf").retrieve_data()
+    # logger.info("computing fund_lof")
+    # StockZhATest(ds, security_type="fund_lof").retrieve_data()
 
 
