@@ -106,7 +106,7 @@ if __name__ == '__main__':
     SELECT 
         gmt_create,
         gmt_modified,
-        symbol as 代码,
+        代码,
         period,
         adjust,
         日期,

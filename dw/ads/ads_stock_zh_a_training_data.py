@@ -136,7 +136,7 @@ select a.*
     ,d.is_index_000016
     ,d.is_index_000300
 from (
-    select *
+    select ds, 日期, 代码, adjust, period, ma_5, ma_10, ma_20, ma_60, ma_120, ma_240, hhv_5, hhv_10, hhv_20, hhv_60, hhv_120, hhv_240, llv_5, llv_10, llv_20, llv_60, llv_120, llv_240, bias_6, bias_12, bias_24, boll_upper_20, boll_mid_20, boll_lower_20, rsi_6, rsi_12, rsi_24, wr_10, wr_6, mtm_12, mtm_12_ma_6, k_9, d_9, j_9, macd_dif, macd_dea, macd, dmi_pdi, dmi_mdi, dmi_adx, dmi_adxr, obv, cci, roc_12, ma_6_roc_12, bbi, expma_12, expma_50, ar, br, atr, dma_dif, dma, emv, maemv, psy, psyma, asi, asit, mfi, mass, mamass, dpo, madpo, vr, trix, trma, kc_upper, kc_mid, kc_lower, dc_upper, dc_mid, dc_lower
     from dwd_stock_zh_a_ti_hist_df
     where ds in (select max(ds) from dwd_stock_zh_a_ti_hist_df)
     and adjust='hfq' and period='daily'

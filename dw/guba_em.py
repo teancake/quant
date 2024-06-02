@@ -71,7 +71,7 @@ def guba_em(symbol: str = "600000"):
 
 class SentimentAnalyser:
     ollama_conf = get_ollama_config()
-    client = Client(host=f"http://{ollama_conf['server_address']}:{ollama_conf['port']}")
+    client = Client(host=f"http://{ollama_conf['server_address']}:{ollama_conf['port']}", timeout=60)
     model = "qwen:14b"
 
     @classmethod

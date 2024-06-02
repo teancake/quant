@@ -37,8 +37,6 @@ class BaseFactorModel:
 
     def get_return(self):
         df = get_stock_data("all", ds=self.ds, start_date=self.start_date, yf_compatible=True)
-        levels = [df.index, df.symbol]
-        df.index = pd.MultiIndex.from_arrays(levels, names=["date", "ticker"])
         df = df.sort_index(level=["date", "ticker"], ascending=[True, True])
         df["pct_chg"] = df["close"].groupby(level="ticker").pct_change()
         df.dropna(inplace=True)

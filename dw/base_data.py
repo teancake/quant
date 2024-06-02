@@ -72,9 +72,9 @@ class BaseData(ABC):
                 df_schema = self.get_df_schema()
                 return df_schema
             except RequestException as e:
-                logger.warn("api request exception {}".format(e))
+                logger.warning("api request exception {}".format(e))
                 delay_seconds = (i + 1) * backoff_factor
-                logger.warn("delay {} seconds, retry {} of {}".format(delay_seconds, i+1, retry_times))
+                logger.warning("delay {} seconds, retry {} of {}".format(delay_seconds, i+1, retry_times))
                 time.sleep(delay_seconds)
         raise Exception("max retry times reached, there might be a real problem, exception raised.")
 
