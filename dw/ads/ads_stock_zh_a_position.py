@@ -105,9 +105,33 @@ left join (
 ) sell
 on buy.代码 = sell.代码;
 '''
-    db.run_sql(ddl_sql)
-    logger.info("ddl sql finished.")
-    db.run_sql(ads_sql_str)
+    # db.run_sql(ddl_sql)
+    # logger.info("ddl sql finished.")
+
+
+    ads_sql_new_str = '''
+    drop table if exists ads_stock_zh_a_position;
+    create table if not exists ads_stock_zh_a_position as 
+    select pos.*,
+    rec.price_recent,
+    rec.amount_recent,
+    rec.time_recent,
+    rec.action_recent
+    from (
+      select 代码,名称,sum(if(action=0, amount, -1*amount)) as position from stock_zh_a_transaction
+      group by 代码,名称
+    ) pos
+    left join (
+      select 代码,
+      price as price_recent,
+      amount as amount_recent,
+      gmt_create as time_recent,
+      action as action_recent,
+      row_number()over (partition by 代码  order by gmt_create desc) as rn
+      from stock_zh_a_transaction 
+    ) rec on pos.代码=rec.代码 and rec.rn = 1;
+    '''
+    db.run_sql(ads_sql_new_str)
     logger.info("ads sql finished.")
 
 

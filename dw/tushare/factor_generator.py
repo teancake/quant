@@ -6,6 +6,11 @@ Project: alphasickle
 Author: Moses
 E-mail: 8342537@qq.com
 """
+
+# 数据预处理及截面回归的过程参考 https://qsdoc.readthedocs.io/zh-cn/latest/%E9%A3%8E%E9%99%A9%E6%A8%A1%E5%9E%8B.html
+# QuantStudio的文档
+
+
 import os
 import numpy as np
 import pandas as pd

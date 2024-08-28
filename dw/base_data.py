@@ -28,6 +28,9 @@ class BaseData(ABC):
         self.table_name = self.get_table_name()
         self.ds = self.generate_default_ds() if ds is None else ds
 
+    def get_ds_ahead(self, ds, days):
+        return (datetime.strptime(ds, '%Y%m%d') - timedelta(days=days)).strftime("%Y%m%d")
+
     def table_exists(self):
         sql = f"SHOW TABLES LIKE '{self.table_name}'"
         res = self.db.run_sql(sql)

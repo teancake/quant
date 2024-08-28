@@ -19,6 +19,11 @@ def get_stock_position():
     stock_list = set(get_stock_list()) & set(results)
     return list(stock_list)
 
+def get_securities_position():
+    results = StarrocksDbUtil().run_sql(f"""select 代码 from ads_stock_zh_a_position where position > 0""")
+    results = [item[0] for item in results]
+    stock_list = set(get_securities_list()) & set(results)
+    return list(stock_list)
 
 def get_list_date():
     sql = f"select distinct 代码 as ticker, 上市时间 as list_date from dwd_stock_individual_info_em_df where ds in (select max(ds) from dwd_stock_individual_info_em_df) and length(上市时间)=8;"
@@ -76,7 +81,7 @@ def get_zh_securities_data(symbol, ds, start_date, security_type="stock_zh_a", a
         df = df.rename(columns={"开盘": "open", "收盘": "close", "最高": "high", "最低": "low",
                                 "成交量": "volume", "成交额": "amount"})
         df.index.names = ["date", "ticker"]
-        df = df[["open", "close", "high", "low", "volume", "amount"]]
+        df = df[["open", "high", "low", "close", "volume", "amount"]]
     return df
 
 

@@ -128,7 +128,7 @@ class LocalData(BaseData):
         logger.info("LocalData initialized.")
 
     def __update_frepmap(self):
-        logger.info(f"update frepmap {self.freqmap}")
+        # logger.info(f"update frepmap {self.freqmap}")
         self.freqmap.update({name.split(".")[0]: self.root for name in os.listdir(self.root)})
 
     def __update_attr(self, name):
@@ -534,11 +534,31 @@ class TushareFetcher(BaseDataFetcher):
         self.close_file(month_map, 'month_map')
         logger.info("month map obtained.")
 
+    def fetch_index_member_all(self):
+        logger.info("index_member_all")
+        tmp_dir = os.path.join(self.root, "__temp_index_member_all__")
+        os.umask(0)
+        os.makedirs(tmp_dir, exist_ok=True)
+        logger.info(f"dir {tmp_dir} created.")
+
+        df = self.pro.index_classify(level="L3", src="SW2021")
+        for code in df["index_code"]:
+            timer_start = time.time()
+            datdf = self.pro.index_member_all(l3_code=code)
+            self.close_file(datdf, file_name=f"{tmp_dir}/{code}", table_name="tushare_index_member_all")
+            self.sleep_if_too_fast(timer_start)
+        logger.info("index_member_all data obtained.")
+
     # ------------------------------------------------------------------------------------
     # 日数据
     def daily(self, t):
         logger.info(f"obtaining daily {t}")
         return self.pro.daily(trade_date=t)
+
+    def pro_bar_equity(self, code, start_date, end_date, adj):
+        logger.info(f"obtaining pro_bar for equity {code}")
+        ts.pro_bar(api=self.pro, ts_code=code, adj='hfq', start_date=start_date, end_date=end_date, adjfactor=True)
+
 
     def stk_factor(self, t):
         logger.info(f"obtaining stk_factor {t}")

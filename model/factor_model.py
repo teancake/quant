@@ -44,7 +44,7 @@ class BaseFactorModel:
 
     def get_basic_data(self):
         # tushare daily_basic 接口返回的close收盘价是不复权的，不使用它计算pct_chg，使用历史行情
-        sql = f"select * from dwd_tushare_daily_basic_df where ds='{self.ds}' and trade_date > '{self.start_date}';"
+        sql = f"select trade_date, ts_code, pb, total_mv from dwd_tushare_daily_basic_df where ds='{self.ds}' and trade_date > '{self.start_date}';"
         results = StarrocksDbUtil().run_sql(sql)
         df = pd.DataFrame(results)
         df.set_index("trade_date", inplace=True)
@@ -55,7 +55,7 @@ class BaseFactorModel:
         levels = [df.index, df.symbol]
         df.index = pd.MultiIndex.from_arrays(levels, names=["date", "ticker"])
         df["bm"] = 1 / df["pb"]
-        df.drop(columns=["close", "ds"], inplace=True)
+        # df.drop(columns=["close", "ds"], inplace=True)
         return df
 
     def get_rf(self):

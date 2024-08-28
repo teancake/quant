@@ -25,6 +25,7 @@ if __name__ == '__main__':
     fetcher.fetch_meta_data()
     fetcher.fetch_trade_day()
     fetcher.fetch_month_map()
+    fetcher.fetch_index_member_all()
     # 日数据
     fetcher.ensure_data(fetcher.daily, "__temp_daily__", table_name="tushare_daily")  # 日行情表
     fetcher.ensure_data(fetcher.daily_basic, "__temp_daily_basic__", table_name="tushare_daily_basic")  # 每日指标表

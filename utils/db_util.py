@@ -35,12 +35,21 @@ def get_table_columns(table_name):
 #     WITH GRANT OPTION;
 # FLUSH PRIVILEGES;
 class DbUtil:
-
+    # The typical usage of create_engine() is once per particular database URL,
+    # held globally for the lifetime of a single application process.
+    # A single Engine manages many individual DBAPI connections on behalf of the process
+    # and is intended to be called upon in a concurrent fashion.
+    # The Engine is not synonymous to the DBAPI connect() function,
+    # which represents just one connection resource -
+    # the Engine is most efficient when created just once at the module level of an application,
+    # not per-object or per-function call.
+    # create_engine 会建立一个连接池，一个 engine就够了，否则mysqld创建很多连接之后可能会OOM
+    #
+    server_address, port, db_name, user, password = get_mysql_config()
+    engine = sqlalchemy.create_engine(
+        f"mysql+pymysql://{user}:{password}@{server_address}:{port}/{db_name}?charset=utf8")
 
     def __init__(self):
-        server_address, port, db_name, user, password = get_mysql_config()
-        self.engine = sqlalchemy.create_engine(
-            f"mysql+pymysql://{user}:{password}@{server_address}:{port}/{db_name}?charset=utf8")
         pass
 
     def get_db_engine(self):
@@ -54,6 +63,13 @@ class DbUtil:
         sql = sqlalchemy.text(sql)
         result = []
         with self.get_db_engine().connect() as con:
+        # When the Connection is closed at the end of the with: block,
+        # the referenced DBAPI connection is released to the connection pool.
+        # From the perspective of the database itself, the connection pool will not
+        # actually “close” the connection assuming the pool has room to store this connection for the next use.
+        # When the connection is returned to the pool for re-use,
+        # the pooling mechanism issues a rollback() call on the DBAPI connection
+        # so that any transactional state or locks are removed
             trans = con.begin()
             try:
                 cursor_result = con.execute(sql)

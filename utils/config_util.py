@@ -7,6 +7,11 @@ client = nacos.NacosClient(SERVER_ADDRESSES, namespace=NAMESPACE)
 
 group = "quant"
 
+def get_airflow_config():
+    data_id = "quant-common-airflow.yml"
+    conf = client.get_config(data_id, group)
+    return yaml.safe_load(conf)
+
 
 def get_mysql_config():
     data_id = "quant-common-mysql.yml"
@@ -34,3 +39,22 @@ def get_ollama_config():
     conf = yaml.safe_load(conf)
     return conf["ollama"]
 
+
+def get_moonshot_config():
+    data_id = "quant-common-rag.yml"
+    conf = client.get_config(data_id, group)
+    conf = yaml.safe_load(conf)
+    return conf["moonshot"]
+
+def get_zhipu_config():
+    data_id = "quant-common-rag.yml"
+    conf = client.get_config(data_id, group)
+    conf = yaml.safe_load(conf)
+    return conf["zhipu"]
+
+
+def get_redis_config():
+    data_id = "quant-common-redis.yml"
+    conf = client.get_config(data_id, group)
+    conf = yaml.safe_load(conf)
+    return conf

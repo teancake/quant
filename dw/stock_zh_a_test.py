@@ -45,11 +45,24 @@ def white_noise_test(series):
     return [lb_minp_lag, lb_stat, lb_pvalue, bp_stat, bp_pvalue]
 
 
+def func_wrapper(func):
+    def wrapped_func(x):
+        try:
+            return func(x)
+        except Exception as e:
+            logger.warning(f"exception in {func}, row value {x}")
+            raise e
+    return wrapped_func
+
+
+
+
 def compute_metrics(data):
     # basic
     df = describe(data)
     df.drop(df.iloc[-9:, :].index, inplace=True)
     df.rename(index={"range": "min_max_range"}, inplace=True)
+    logger.info(f"descriptive metrics {df}")
     # normal distribution test
     # jb, jbpv, skew, kurtosis = jarque_bera(x)
     tstat, tpv = ztest(data)
@@ -59,14 +72,14 @@ def compute_metrics(data):
     df.loc["dw"] = dw
 
     # stationary test
-    adf_df = data.apply(adfuller, axis=0).loc[:1]
+    adf_df = data.apply(func_wrapper(adfuller), axis=0).loc[:1]
     adf_df.index = ["adf", "adfpv"]
     # 注意ADF和KPSS的原假设是反着的
-    kpss_df = data.apply(kpss, axis=0).loc[:1]
+    kpss_df = data.apply(func_wrapper(kpss), axis=0).loc[:1]
     kpss_df.index = ["kpss", "kpsspv"]
 
     # auto-correlation / white noise test
-    lb_df = data.apply(white_noise_test, axis=0)
+    lb_df = data.apply(func_wrapper(white_noise_test), axis=0)
     lb_df.index = ["lb_minp_lag", "lb_stat", "lb_pvalue", "bp_stat", "bp_pvalue"]
 
     df = pd.concat([df, adf_df, kpss_df, lb_df])

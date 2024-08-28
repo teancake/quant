@@ -13,6 +13,7 @@ import sys
 
 from dw.base_data import BaseData
 from utils.log_util import get_logger
+from utils.task_queue_util import LLMTaskQueue
 
 logger = get_logger(__name__)
 
@@ -69,20 +70,50 @@ def guba_em(symbol: str = "600000"):
                     "post_display_time"]]
 
 
-class SentimentAnalyser:
-    ollama_conf = get_ollama_config()
-    client = Client(host=f"http://{ollama_conf['server_address']}:{ollama_conf['port']}", timeout=60)
-    model = "qwen:14b"
 
-    @classmethod
-    def sentiment_analysis(cls, df):
+
+class SentimentAnalyser:
+    def __init__(self):
+        self.q = LLMTaskQueue(name="guba_sentiment")
+
+    def analyze(self, df):
         input_cols = ["post_title"]
         output_cols = ["sentiment", "reason"]
         for index, row in df.iterrows():
-            res = cls._chat(*row[input_cols].to_list())
-            for output in output_cols:
-                df.loc[index, output] = res.get(output, "")
+            req = self.build_req(row[input_cols].to_list(), index)
+            self.q.enqueue(req)
+        self.q.wait_tasks()
+        outputs = self.q.get_tasks_outputs()
+        for output in outputs:
+            index = output["request_id"]
+            content = self.parse_output_message(output)
+            for col in output_cols:
+                df.loc[index, col] = content.get(col, "")
         return df
+
+    def parse_output_message(self, output):
+        content = output["message"]["content"].replace("\n", "")
+        pattern = r"({[^}]*})"
+        match = re.search(pattern, content)
+        if not match:
+            logger.warning(f"regexp match failed, content {content}")
+            return dict()
+        js = json.loads(match.group(1))
+        return js
+    def build_req(self, contents, request_id):
+        logger.info(f"contents is {contents}")
+        message = " .".join(contents)
+        messages = [
+            {
+                "role": "system",
+                "content": "你是一个股票分析师。根据下面的话，判断说话人对该股票的情绪，正面，中性或者负面，并解释原因，以JSON格式输出，字段为sentiment, reason。只输出JSON字符串即可，不要换行。",
+            },
+            {
+                "role": "user",
+                "content": f'{message}',
+            },
+        ]
+        return {"messages": messages, "request_id": request_id}
 
     @classmethod
     def _chat(cls, *args):
@@ -156,6 +187,8 @@ class SentimentAnalyser:
 
 
 class GubaEm(BaseData):
+    sentiment_analyzer = SentimentAnalyser()
+
     def __init__(self, ds, symbol, enable_sentiment=False):
         super().__init__()
         self.ds = ds
@@ -174,7 +207,7 @@ class GubaEm(BaseData):
         df = df.reset_index(drop=True)
         df.insert(loc=0, column="symbol", value=self.symbol)
         if self.enable_sentiment:
-            df = SentimentAnalyser.sentiment_analysis(df)
+            df = self.sentiment_analyzer.analyze(df)
         return df
 
     def get_downloaded_symbols(self):
@@ -218,6 +251,7 @@ class DataHelper:
                 logger.error(traceback.format_exception(e))
             self.rate_limiter_sleep(timer_start, loops_per_second_min=0.1, loops_per_second_max=0.3)
 
+        GubaEm(ds=ds, symbol="").sentiment_analyzer.q.stop()
         self._clean_up_data(ds)
 
     def _get_downloaded_symbols(self, ds):

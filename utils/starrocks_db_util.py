@@ -10,7 +10,7 @@ from utils.db_util import get_table_columns, get_mysql_config
 # CREATE DATABASE akshare_data;
 # CREATE USER 'quant'@'%' IDENTIFIED BY 'quant';
 # GRANT ALL PRIVILEGES ON DATABASE akshare_data TO 'quant'@'%'  WITH GRANT OPTION;
-
+# GRANT OPERATE ON SYSTEM TO USER 'quant'@'%' WITH GRANT OPTION;
 
 
 # backup and restore
@@ -115,7 +115,7 @@ def mysql_to_ods_dwd(mysql_table_name, ds, di_df="di", unique_columns=None, life
             mysql_where_cond = f"DATE_FORMAT(gmt_create, '%Y%m%d') = {ds}"
     mysql_where_cond = f"WHERE {mysql_where_cond}"
 
-    ods_sql_str = f'''
+    ods_ddl_sql_str = f'''
         CREATE TABLE IF NOT EXISTS `external_{mysql_table_name}` ( 
          {mysql_columns_str}
         )
@@ -146,7 +146,8 @@ def mysql_to_ods_dwd(mysql_table_name, ds, di_df="di", unique_columns=None, life
             "dynamic_partition.buckets" = "32"
         )
         ;
-
+    '''
+    ods_insert_sql_str = f'''
         INSERT OVERWRITE {ods_table_name} PARTITION(p{ds})
         SELECT 
         {rename_column_names_str},
@@ -182,7 +183,8 @@ def mysql_to_ods_dwd(mysql_table_name, ds, di_df="di", unique_columns=None, life
 
     dwd_sql_str += select_str
     db = StarrocksDbUtil()
-    db.run_sql(ods_sql_str)
+    db.run_sql(ods_ddl_sql_str)
+    db.run_sql(ods_insert_sql_str)
     if ods_dqc:
         db.dqc_row_count(ods_table_name, ds)
     else:

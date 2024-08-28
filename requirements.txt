@@ -27,3 +27,5 @@ statsmodels
 backtrader
 PyPortfolioOpt
 ollama
+openai
+redis

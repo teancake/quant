@@ -42,13 +42,13 @@ if __name__ == '__main__':
 
     # 季度数据
     mysql_table_name = "tushare_fina_indicator"
-    mysql_to_ods_dwd(mysql_table_name, ds, di_df="df", unique_columns=["ts_code", "end_date"], lifecycle=31, days_ahead=2, mysql_where_cond="1 = 1")
+    mysql_to_ods_dwd(mysql_table_name, ds, di_df="df", unique_columns=["ts_code", "end_date"], lifecycle=31, days_ahead=0, mysql_where_cond="1 = 1")
 
     mysql_table_name = "tushare_cashflow"
-    mysql_to_ods_dwd(mysql_table_name, ds, di_df="df", unique_columns=["ts_code", "end_date"], lifecycle=31, days_ahead=2, mysql_where_cond="1 = 1")
+    mysql_to_ods_dwd(mysql_table_name, ds, di_df="df", unique_columns=["ts_code", "end_date"], lifecycle=31, days_ahead=1, mysql_where_cond="1 = 1")
 
     mysql_table_name = "tushare_balancesheet"
-    mysql_to_ods_dwd(mysql_table_name, ds, di_df="df", unique_columns=["ts_code", "end_date"], lifecycle=31, days_ahead=2, mysql_where_cond="1 = 1")
+    mysql_to_ods_dwd(mysql_table_name, ds, di_df="df", unique_columns=["ts_code", "end_date"], lifecycle=31, days_ahead=1, mysql_where_cond="1 = 1")
 
     mysql_table_name = "tushare_income"
-    mysql_to_ods_dwd(mysql_table_name, ds, di_df="df", unique_columns=["ts_code", "end_date"], lifecycle=31, days_ahead=2, mysql_where_cond="1 = 1")
+    mysql_to_ods_dwd(mysql_table_name, ds, di_df="df", unique_columns=["ts_code", "end_date"], lifecycle=31, days_ahead=1, mysql_where_cond="1 = 1")

@@ -24,7 +24,6 @@ if __name__ == '__main__':
     db = StarrocksDbUtil()
     temp_sql_str = '''
     drop table if exists temp_stock_zh_a_hist_filter_a;
-    SET SESSION query_timeout=600;
     create table if not exists temp_stock_zh_a_hist_filter_a as
     select *,
            row_number() over (partition by 代码  order by 日期 asc) as date_rn
@@ -45,7 +44,6 @@ if __name__ == '__main__':
 
     temp_sql_str = '''
     drop table if exists temp_stock_zh_a_hist_filter;
-    set SESSION query_timeout = 600;
     create table if not exists temp_stock_zh_a_hist_filter as
         select a.*
         ,a.开盘 as open
@@ -112,8 +110,6 @@ select * from temp_stock_zh_a_index_wide limit 10;
 
 
 drop table if exists temp_stock_zh_a_ti_hist_ext;
-set SESSION query_timeout = 600;
-
 create table if not exists temp_stock_zh_a_ti_hist_ext as
 select a.*
     ,b.open
@@ -158,7 +154,6 @@ on a.代码 = d.代码
 
     temp_sql_str = '''
     drop table if exists ads_stock_zh_a_training_data;
-    SET SESSION query_timeout = 600;
     create table if not exists ads_stock_zh_a_training_data as
     select
       a.*,

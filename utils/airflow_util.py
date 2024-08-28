@@ -1,20 +1,55 @@
 from airflow.utils.email import send_email
-from datetime import timedelta
 from airflow.sensors.date_time import DateTimeSensor
+from datetime import timedelta
+
+import requests
+import pytz
+
+
+import sys
+import os
+cur_dir = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(cur_dir)
+print(f"current dir {cur_dir},  sys path {sys.path}")
+from config_util import get_airflow_config
 
 def get_remote_ssh_conf():
-    return "cheese", "cheese", "192.168.50.20"
+    ssh_conf = get_airflow_config()["ssh"]
+    return ssh_conf["user"], ssh_conf["password"], ssh_conf["host_name"]
+
+def get_webhook_endpoint():
+    alert_conf = get_airflow_config()["alert"]
+    return alert_conf["webhook"]
 
 def get_default_args():
-    return {'email_on_failure': False, "email": ["bowmore.alert@outlook.com"],
+    print("get default args")
+    alert_conf = get_airflow_config()["alert"]
+    return {'email_on_failure': False, 'email_on_retry': False, "email": [alert_conf["email_address"]],
             'on_failure_callback': failure_callback, 'retries': 1, 'retry_delay': timedelta(minutes=1)}
 
 
 def failure_callback(context: dict):
-    send_email_with_failure_info(context)
+    # send_email_with_failure_info(context)
+    send_http_webhook_notification(context)
+
+
+def send_http_webhook_notification(context: dict):
+    print(f"send http webhook notification")
+    dag_id = context['dag'].dag_id
+    task_id = context['task_instance'].task_id
+    exception = context['exception']
+    ds = context['ds']
+    execution_date = context['dag_run'].queued_at.astimezone(pytz.timezone('Asia/Shanghai')).strftime('%Y-%m-%d %H:%M:%S')
+
+    subject = f"Airflow {task_id} 任务报警"
+    content = f"DAG名称 {dag_id}, 任务名称 {task_id}, 业务日期 {ds}, 开始执行时间 {execution_date}, 错误信息 {exception}"
+    response = requests.get(f"{get_webhook_endpoint()}/{subject}/{content}")
+    return response.json()
+
 
 
 def send_email_with_failure_info(context: dict):
+    print("send email notification")
     dag_id = context['dag'].dag_id
     email = context['dag'].default_args['email']
     schedule_interval = context['dag'].schedule_interval
